@@ -28,6 +28,10 @@ main( )
 	// determine the color using the square-boundary equations:
 
 	vec3 myColor = uColor.rgb;
+	if( uS0-uD/2. <= s  &&  s <= uS0+uD/2.  &&  uT0-uD/2. <= t  &&  t <= uT0+uD/2. )
+	{
+		myColor = vec3( 1., 0., 0. );;
+	}
 
 	// apply the per-fragmewnt lighting to myColor:
 
