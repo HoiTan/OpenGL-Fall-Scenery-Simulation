@@ -1,0 +1,18 @@
+##OpenGL GLIB
+Perspective 70
+LookAt 0 0 10 0 0 0 0 1 0
+
+Vertex fsilh.vert
+Fragment fsilh.frag
+Program FragSilhouette \
+	uColor {0.50 0.25 0. 1.} \
+	uSilh <false> \
+	uDeltaZ <0. 0.001 0.002> \
+	uOpaque <true> \
+	uTol <0. 0.04 0.5> \
+	uKa <0. 0.1 1.> \
+	uKd <0. 0.8 1.> \
+	uKs <0. 0.1 1.> \
+	uShininess <2. 10. 50.> \
+	uSilhColor {1. 1. 1. 1.} 
+Obj 

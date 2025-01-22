@@ -1,6 +1,3 @@
 
-0(30) : warning C1503: undefined variable "vert"
-0(30) : warning C1503: undefined variable "vert"
-0(30) : error C1008: undefined variable "vert"
-0(30) : error C1008: undefined variable "vert"
+0(16) : error C7521: OpenGL does not allow initialization of varying variables
 

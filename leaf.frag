@@ -6,6 +6,7 @@ uniform float   uKa, uKd, uKs;	 // coefficients of each type of lighting -- make
 uniform vec4    uColor;		 // object color
 uniform vec4    uSpecularColor;	 // light color
 uniform float   uShininess;	 // specular exponent
+uniform float   uAlpha;		 // transparency
 
 // square-equation uniform variables -- these should be set every time Display( ) is called:
 
@@ -47,6 +48,6 @@ main( )
 		ss = pow( max( dot(Eye,ref),0. ), uShininess );
 	}
 	vec3 specular = uKs * ss * uSpecularColor.rgb;
-	gl_FragColor = vec4( ambient + diffuse + specular,  1. );
+	gl_FragColor = vec4( ambient + diffuse + specular, uAlpha );
 }
 
