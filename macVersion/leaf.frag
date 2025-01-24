@@ -1,5 +1,5 @@
 // make this 120 for the mac:
-#version 330 compatibility
+// #version 330 compatibility
 
 // lighting uniform variables -- these can be set once and left alone:
 uniform float   uKa, uKd, uKs;	 // coefficients of each type of lighting -- make sum to 1.0
@@ -14,10 +14,10 @@ uniform float   uS0, uT0, uD;
 
 // in variables from the vertex shader and interpolated in the rasterizer:
 
-in  vec3  vN;		   // normal vector
-in  vec3  vL;		   // vector from point to light
-in  vec3  vE;		   // vector from point to eye
-in  vec2  vST;		   // (s,t) texture coordinates
+varying  vec3  vN;		   // normal vector
+varying  vec3  vL;		   // vector from point to light
+varying  vec3  vE;		   // vector from point to eye
+varying  vec2  vST;		   // (s,t) texture coordinates
 
 
 void
@@ -46,18 +46,26 @@ main( )
 	{
 		vec3 ref = normalize(  reflect( -Light, Normal )  );
 		ss = pow( max( dot(Eye,ref),0. ), uShininess );
+		vec3 specular = uKs * ss * uSpecularColor.rgb;
+		gl_FragColor = vec4( ambient + diffuse + specular, uAlpha );
 	}
-	vec3 specular = uKs * ss * uSpecularColor.rgb;
+	else if( dot(-Normal,Light) > 0.)
+	{
+		// Calculate translucency color by subtracting light color from object color
+		float translucencyFactor = max(dot(-Normal, Light), 0.0);  // Back-facing light
+		vec3 translucencyColor = max(uColor.rgb - uSpecularColor.rgb, 0.0);  // Ensure no negative colors
+		vec3 translucency = translucencyFactor * translucencyColor;
 
-	// Calculate translucency color by subtracting light color from object color
-    float translucencyFactor = max(dot(-Normal, Light), 0.0);  // Back-facing light
-    vec3 translucencyColor = max(uColor.rgb - uSpecularColor.rgb, 0.0);  // Ensure no negative colors
-    vec3 translucency = translucencyFactor * translucencyColor;
+		// Combine diffuse and translucency
+		vec3 finalColor = diffuse + translucency;
+		gl_FragColor = vec4( finalColor, uAlpha );
 
-    // Combine diffuse and translucency
-    vec3 finalColor = diffuse + translucency;
+	}
+	
 
-	gl_FragColor = vec4( finalColor, uAlpha );
+	
+
+	
 	// gl_FragColor = vec4( ambient + diffuse + specular, uAlpha );
 }
 
