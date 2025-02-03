@@ -1,4 +1,3 @@
 
-0(13) : error C0000: syntax error, unexpected identifier, expecting "::" at token "vecQ"
-0(21) : error C1503: undefined variable "LightPosition"
+ERROR: 0:31: 'myColor' : syntax error: syntax error
 

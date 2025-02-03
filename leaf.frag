@@ -1,29 +1,34 @@
-#version 120
+// make this 120 for the mac:
+// #version 330 compatibility
 
-// Lighting uniform variables:
-uniform float   uKa, uKd, uKs;     // Coefficients for ambient, diffuse, specular
-uniform vec4    uColor;            // Object (diffuse) color
-uniform vec4    uSpecularColor;    // Specular highlight color
-uniform float   uShininess;        // Specular exponent
-uniform float   uAlpha;            // Transparency (alpha)
+// lighting uniform variables -- these can be set once and left alone:
+uniform float   uKa, uKd, uKs;	 // coefficients of each type of lighting -- make sum to 1.0
+uniform vec3    uColor;		 // object color
+uniform vec4    uSpecularColor;	 // light color
+uniform float   uShininess;	 // specular exponent
+uniform float   uAlpha;		 // transparency
 
 // Extra lighting param for translucency strength:
 uniform float   uTranslucency;     // How strong the back-light effect is
 
-// "Square-equation" uniforms (not explicitly used here, but left for completeness):
+// square-equation uniform variables -- these should be set every time Display( ) is called:
 uniform float   uS0, uT0, uD;
 
-// Interpolated from the vertex shader:
-varying vec3    vN;                // Normal vector at this fragment
-varying vec3    vL;                // Vector from fragment to light
-varying vec3    vE;                // Vector from fragment to eye
-varying vec2    vST;               // (s,t) texture coordinates
+// in variables from the vertex shader and interpolated in the rasterizer:
 
-void main( )
+varying  vec3  vN;		   // normal vector
+varying  vec3  vL;		   // vector from point to light
+varying  vec3  vE;		   // vector from point to eye
+varying  vec2  vST;		   // (s,t) texture coordinates
+
+
+void 
+main( )
 {
     // Basic color for this object (no textures are being used here, 
     // but you can sample a texture if you want)
     vec3 myColor = uColor.rgb;
+    // vec3 myColor = vec3(0, 1, 0);
 
     // Normalize the interpolated vectors:
     vec3 Normal = normalize( vN );
@@ -46,7 +51,8 @@ void main( )
         float edotr      = max( dot(Eye, reflectDir), 0.0 );
         ss              = pow( edotr, uShininess );
     }
-    vec3 specular = uKs * ss * uSpecularColor.rgb;
+    vec3 specularColor = vec3( 1.0, 1.0, 1.0 );
+    vec3 specular = uKs * ss * specularColor.rgb;
 
     // 4. Translucency Term:
     //    How strongly the light hits the 'back' side:

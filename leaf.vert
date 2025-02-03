@@ -1,16 +1,16 @@
 // make this 120 for the mac:
-#version 330 compatibility
+// #version 330 compatibility
 
 // out variables to be interpolated in the rasterizer and sent to each fragment shader:
 
-out  vec2  vST;	  // (s,t) texture coordinates
-out  vec3  vN;	  // normal vector
-out  vec3  vL;	  // vector from point to light
-out  vec3  vE;	  // vector from point to eye
+varying  vec2  vST;	  // (s,t) texture coordinates
+varying  vec3  vN;	  // normal vector
+varying  vec3  vL;	  // vector from point to light
+varying  vec3  vE;	  // vector from point to eye
 
 // where the light is:
 
-const vec3 LightPosition = vec3(  0., 5., 5. );
+const vec3 LightPosition = vec3(  10., 10., 10. );
 
 void
 main( )

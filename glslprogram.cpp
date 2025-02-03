@@ -52,7 +52,7 @@ GetExtension( char *file )
 
 GLSLProgram::GLSLProgram( )
 {
-	// Init( );
+	Init( );
 }
 
 
@@ -461,9 +461,11 @@ void
 GLSLProgram::Init( )
 {
 	Verbose = false;
-	const GLubyte* extensions = NULL;
+
 #ifndef __APPLE__
-	extensions = glGetString(GL_EXTENSIONS);
+	const GLubyte* extensions = glGetString(GL_EXTENSIONS);
+#else
+	const GLubyte* extensions = NULL;
 #endif
 	if( extensions != NULL )
 	{
@@ -561,16 +563,6 @@ GLSLProgram::UseFixedFunction( )
 {
 	this->Use( 0 );
 };
-
-
-#ifdef COMPUTE
-void
-GLSLProgram::DispatchCompute( int num_groups_x, int num_groups_y, int num_groups_z )
-{
-	this->Use( );
-	glDispatchCompute( num_groups_x, num_groups_y, num_groups_z );
-}
-#endif
 
 
 int
@@ -804,10 +796,6 @@ GLSLProgram::SetUniformVariable( char* name, int val )
 		switch( type )
 		{
 			case GL_INT:
-			case GL_SAMPLER_1D:
-			case GL_SAMPLER_2D:
-			case GL_SAMPLER_3D:
-			case GL_SAMPLER_CUBE:
 				glUniform1i( loc, val );
 				break;
 
@@ -910,36 +898,6 @@ GLSLProgram::SetUniformVariable( char* name, double val )
 
 
 void
-GLSLProgram::SetUniformVariable(char* name, float val0, float val1 )
-{
-	int loc;
-	if ((loc = GetUniformLocation(name)) >= 0)
-	{
-		this->Use();
-#ifdef TYPE_CHECKS
-		GLint  size;
-		GLenum type;
-		GetUniformTypeAndSize(name, &size, &type);
-		switch (type)
-		{
-		case GL_FLOAT_VEC2:
-			glUniform2f(loc, val0, val1);
-			break;
-
-		case GL_FLOAT_VEC3:
-			glUniform3f(loc, val0, val1, 0.f);
-			break;
-
-		default:
-			fprintf(stderr, "Setting uniform variable '%s': please be more explicit with the variable type\n", name);
-		}
-#else
-		glUniform3f(loc, val0, val1, val2);
-#endif
-	}
-};
-
-void
 GLSLProgram::SetUniformVariable( char* name, float val0, float val1, float val2 )
 {
 	int loc;
@@ -950,13 +908,13 @@ GLSLProgram::SetUniformVariable( char* name, float val0, float val1, float val2 
 		GLint  size;
 		GLenum type;
 		GetUniformTypeAndSize( name, &size, &type );
-		switch( type )
+		switch( size )
 		{
-			case GL_FLOAT_VEC3:
+			case 3:
 				glUniform3f( loc, val0, val1, val2 );
 				break;
 
-			case GL_FLOAT_VEC4:
+			case 4:
 				glUniform4f( loc, val0, val1, val2, 1.f );
 				break;
 
@@ -981,13 +939,13 @@ GLSLProgram::SetUniformVariable( char* name, float val0, float val1, float val2,
 		GLint  size;
 		GLenum type;
 		GetUniformTypeAndSize( name, &size, &type );
-		switch( type )
+		switch( size )
 		{
-			case GL_FLOAT_VEC3:
+			case 3:
 				glUniform3f( loc, val0, val1, val2 );
 				break;
 
-			case GL_FLOAT_VEC4:
+			case 4:
 				glUniform4f( loc, val0, val1, val2, val3 );
 				break;
 
@@ -1005,6 +963,7 @@ void
 GLSLProgram::SetUniformVariable( char* name, float vals[3] )
 {
 	int loc;
+	//fprintf( stderr, "Found a 3-element array\n" );
 
 	if( ( loc = GetUniformLocation( name ) )  >= 0 )
 	{
@@ -1210,9 +1169,9 @@ main( )
                 //fprintf( stderr, "GLEW initialized OK\n" );
         //fprintf( stderr, "Status: Using GLEW %s\n", glewGetString(GLEW_VERSION));
 
-	//fprintf( stderr, "Starting\n" );
+	fprintf( stderr, "Starting\n" );
 	Pattern.Init( );
-	//fprintf( stderr, "Called Init\n" );
+	fprintf( stderr, "Called Init\n" );
 	return 0;
 }
 #endif

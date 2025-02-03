@@ -52,11 +52,10 @@
 //		6. The transformations to be reset
 //		7. The program to quit
 //
-//	Author:			Joe Graphics
-
+//	Author:			Hoimau Tan
 // title of these windows:
 
-const char *WINDOWTITLE = "OpenGL / GLUT Sample -- Joe Graphics";
+const char *WINDOWTITLE = "OpenGL / GLUT Tree simulation -- Hoi Tan";
 const char *GLUITITLE   = "User Interface Window";
 
 // what the glui package defines as true and false:
@@ -297,6 +296,7 @@ MulArray3(float factor, float a, float b, float c )
 Keytimes Kamp, Kfreq, Kspeed; 
 
 unsigned char * mpLeaf2Texture;
+GLuint  OSUSphere;
 GLuint Leaf2DL;
 GLuint Leaf2Tex;
 GLuint SphereDL;
@@ -304,6 +304,8 @@ GLuint GridDL;
 GLSLProgram LeafProgram;
 
 int changeRule = 0;	// switch by key 
+float NowS0, NowT0, NowD, NowKa, NowKd, NowKs, NowShine, NowAlpha;
+float NowLeafColor[3] = { 0.f, 0.f, 0.f };
 
 
 // main program:
@@ -472,15 +474,25 @@ Display( )
     // turn that into a time in seconds:
     float nowTime = (float)msec / 1000.; // 0.-10.
 
+
+		//set light
+	glPushMatrix();
+		glTranslatef(-10,30,0);
+		glColor3f(1,1,1);
+		glScalef(.5,.5,.5);
+		glCallList(OSUSphere);
+		glRotatef(90,0, 0, 1);
+		SetPointLight(GL_LIGHT0,0,0,0,1,1,1);   
+	glPopMatrix();
+	glEnable( GL_LIGHTING );
+	glEnable( GL_LIGHT0 );
+	glEnable( GL_TEXTURE_2D );
     glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
 
-    // LeafProgram.Use( );
-    //     glActiveTexture(GL_TEXTURE0); // Set texture to live on texture unit 0
-    //     glBindTexture(GL_TEXTURE_2D, Leaf2Tex);
-    //     LeafProgram.SetUniformVariable("uTexUnit", 0);
-    //     glCallList(Leaf2DL);
-    // LeafProgram.UnUse( );
 
+	glActiveTexture(GL_TEXTURE0); // Set texture to live on texture unit 0
+	glBindTexture(GL_TEXTURE_2D, Leaf2Tex);
+	LeafProgram.SetUniformVariable("uTexUnit", 0);
 
     // Define the L-system:
 	// F Move forward and draw a line segment
@@ -511,15 +523,15 @@ Display( )
         {'A', inputRule}
     };
 
-	int iterations = std::abs((int) nowTime - 5);
+	int iterations = 4;
+	// int iterations = std::abs((int) nowTime - 5);
 	// axiom, rules, iteration
     LSystem lsystem(axiom, rules, iterations); 
     std::string finalString = lsystem.generate();
 
-    // Interpret L-system string into line vertices
-    Turtle turtle;
-	//	float angleDegrees, float stepLength, float radius, float taperFactor
-	turtle.setInitialFactor(35.0f, 10.0f, 1.f, 0.4f);
+    
+    Turtle turtle;			// Interpret L-system string into line vertices
+	turtle.setInitialFactor(35.0f, 10.0f, 1.f, 0.4f);		//	float angleDegrees, float stepLength, float radius, float taperFactor
 	glPushMatrix(); 
     	turtle.interpret(finalString);
 	glPopMatrix();
@@ -533,7 +545,7 @@ Display( )
 	// draw Leaves
 	std::vector<Turtle::Leaf> leafPositions = turtle.GetLeaves();
 	// glEnable( GL_TEXTURE_2D );
-	glBindTexture(GL_TEXTURE_2D, Leaf2Tex); 
+	// glBindTexture(GL_TEXTURE_2D, Leaf2Tex); 
     // Draw each leaf with its orientation
     for (const auto &leaf : leafPositions) {
         glPushMatrix();
@@ -559,36 +571,37 @@ Display( )
         glScalef(scale, scale, scale);
 
         // Call the display list for the leaf model
-		float rand = leaf.position.y/60.0f ;
-		// std::cout << leaf.position.y;
-        if (rand < 0.30f) {
-            glColor3f(1.0f, 0.55f, 0.0f); 
-        } else if (rand < 0.50f) {
-            glColor3f(1.0f, 0.6f, 0.2f); 
-        } else if (rand < 0.80f) {
-            glColor3f(0.8f, 0.1f, 0.1f); // Bright Red
-        } else if (rand < 0.90f) {
-            glColor3f(0.85f, 0.2f, 0.1f); // Orange-Red
-        } else {
-            glColor3f(0.7f, 0.0f, 0.0f); // Deep Red
-        }
+		// float rand = leaf.position.y/60.0f ;
+		// // std::cout << leaf.position.y;
+        // if (rand < 0.30f) {
+        //     glColor3f(1.0f, 0.55f, 0.0f); 
+        // } else if (rand < 0.50f) {
+        //     glColor3f(1.0f, 0.6f, 0.2f); 
+        // } else if (rand < 0.80f) {
+        //     glColor3f(0.8f, 0.1f, 0.1f); // Bright Red
+        // } else if (rand < 0.90f) {
+        //     glColor3f(0.85f, 0.2f, 0.1f); // Orange-Red
+        // } else {
+        //     glColor3f(0.7f, 0.0f, 0.0f); // Deep Red
+        // }
 
 
-        
-
+        // glBindTexture(GL_TEXTURE_2D, Leaf2Tex);
+		LeafProgram.Use( );
         glCallList(Leaf2DL);
-
+		LeafProgram.UnUse( );
         glPopMatrix();
     }
 
-    //testing
+    // testing
     // glBindTexture(GL_TEXTURE_2D, Leaf2Tex);
     // glPushMatrix();
     //     glScalef(3,3,3);
     //     glCallList(Leaf2DL);
     // glPopMatrix();
-
+	LeafProgram.UnUse( );
     glDisable( GL_TEXTURE_2D );
+
 
 
 	//floor
@@ -597,21 +610,22 @@ Display( )
 		glScalef(5, 5, 5);
 		glCallList(GridDL);
     glPopMatrix();
+	glDisable( GL_LIGHTING );
 	// background
-	// glPushMatrix();
-	// 	glTranslatef(0, 0, -50);
-    //     glRotatef(-90, 1, 0, 0);
-	// 	glScalef(5, 5, 5);
-	// 	glCallList(GridDL);
-    // glPopMatrix();
-    // glCallList(BoxList);
-	// 	glPushMatrix();
-	// 	glTranslatef(50, 0, 0);
-	// 	glRotatef(-90, 0, 1, 0);
-    //     glRotatef(-90, 1, 0, 0);
-	// 	glScalef(5, 5, 5);
-	// 	glCallList(GridDL);
-    // glPopMatrix();
+	glPushMatrix();
+		glTranslatef(0, 0, -50);
+        glRotatef(-90, 1, 0, 0);
+		glScalef(5, 5, 5);
+		glCallList(GridDL);
+    glPopMatrix();
+    glCallList(BoxList);
+		glPushMatrix();
+		glTranslatef(50, 0, 0);
+		glRotatef(-90, 0, 1, 0);
+        glRotatef(-90, 1, 0, 0);
+		glScalef(5, 5, 5);
+		glCallList(GridDL);
+    glPopMatrix();
 
 
     glCallList(BoxList);
@@ -1006,6 +1020,7 @@ InitGraphics( )
 
     SetUpTexture("LeafProject/mapleleaf2.bmp", &Leaf2Tex);
     
+	// set up Shader:
     LeafProgram.Init( );
     bool valid = LeafProgram.Create( "leaf.vert", "leaf.frag" );
     if( ! valid )
@@ -1017,10 +1032,23 @@ InitGraphics( )
         fprintf( stderr, "Woo-Hoo! The leaf shader compiled.\n" );
     }
     // coefficients of each type of lighting
-    LeafProgram.SetUniformVariable( "uKa", 0.1f ); // all 3 should add up to 1.0
-    LeafProgram.SetUniformVariable( "uKd", 0.5f );
-    LeafProgram.SetUniformVariable( "uKs", 0.4f );
-    LeafProgram.SetUniformVariable( "uShininess", .5f ); // whatever you like from P3
+	NowKa = 0.1f;
+	NowKd = 0.5f;
+	NowKs = 0.4f;
+	NowShine = 10.f;
+	NowAlpha = 1.0f;
+	NowLeafColor[0] = 1.f;
+	NowLeafColor[1] = 0.5f;
+	NowLeafColor[2] = 0.0f;
+	LeafProgram.Use( );
+    LeafProgram.SetUniformVariable( "uKa", NowKa ); // all 3 should add up to 1.0
+    LeafProgram.SetUniformVariable( "uKd", NowKd );
+    LeafProgram.SetUniformVariable( "uKs", NowKs );
+	LeafProgram.SetUniformVariable("uAlpha", NowAlpha);
+	LeafProgram.SetUniformVariable("uColor", NowLeafColor);
+	LeafProgram.SetUniformVariable("uTranslucency", 1.f);
+    LeafProgram.SetUniformVariable( "uShininess", NowShine ); // whatever you like from P3
+	LeafProgram.UnUse( );
 
 	// init the glew package (a window must be open to do this):
 
@@ -1100,12 +1128,11 @@ InitLists( )
         glEndList( );
     glPopMatrix();
 
-
-    // SphereDL = glGenLists( 1 );
-    // glNewList( SphereDL, GL_COMPILE );
-    //     glShadeModel( GL_SMOOTH );
-    //     OsuSphere( 1., 40, 40 ); // use enough polygonal detail to look nice
-    // glEndList( );
+	OSUSphere = glGenLists( 1 );
+	glNewList( OSUSphere, GL_COMPILE );
+        glShadeModel( GL_SMOOTH );
+        OsuSphere(1, 20, 20); // radius, int slices, int stacks
+    glEndList();
 
     Leaf2DL = glGenLists( 1 );
     glNewList( Leaf2DL, GL_COMPILE);

@@ -2,7 +2,7 @@ void
 SetPointLight( int ilight, float x, float y, float z,  float r, float g, float b )
 {
 	glLightfv( ilight, GL_POSITION,  Array3( x, y, z ) );
-	glLightf(  ilight, GL_SPOT_CUTOFF, 180. );
+	glLightf( ilight, GL_SPOT_CUTOFF, 180. );
 	glLightfv( ilight, GL_AMBIENT,   MulArray3( 0.1f,  1.f, 1.f, 1.f ) );
 	glLightfv( ilight, GL_DIFFUSE,   MulArray3( 0.6f, r, g, b ) );
 	glLightfv( ilight, GL_SPECULAR,  MulArray3( 0.4f, 1.f, 1.f, 1.f ) );

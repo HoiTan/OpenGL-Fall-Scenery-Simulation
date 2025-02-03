@@ -144,9 +144,6 @@ class GLSLProgram
 
 	bool	Create( char *, char * = NULL, char * = NULL, char * = NULL, char * = NULL, char * = NULL );
 	void	DisableVertexAttribArray( const char * );
-#ifdef COMPUTE
-	void	DispatchCompute( int, int, int );
-#endif
 	void	EnableVertexAttribArray( const char * );
 	int	GetAttributeTypeAndSize( GLchar *, GLint *, GLenum * );
 	int	GetUniformTypeAndSize(   GLchar *, GLint *, GLenum * );
@@ -164,7 +161,6 @@ class GLSLProgram
 	void	SetUniformVariable( char *, int );
 	void	SetUniformVariable( char *, float );
 	void	SetUniformVariable( char *, double );
-	void	SetUniformVariable( char*, float, float);
 	void	SetUniformVariable( char *, float, float, float );
 	void	SetUniformVariable( char *, float, float, float, float );
 	void	SetUniformVariable( char *, float[3] );
