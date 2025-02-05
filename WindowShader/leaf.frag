@@ -1,5 +1,4 @@
-// make this 120 for the mac:
-// #version 330 compatibility
+#version 330 compatibility
 
 // lighting uniform variables -- these can be set once and left alone:
 uniform float   uKa, uKd, uKs;	 // coefficients of each type of lighting -- make sum to 1.0
@@ -15,12 +14,10 @@ uniform float   uTranslucency;     // How strong the back-light effect is
 uniform float   uS0, uT0, uD;
 
 // in variables from the vertex shader and interpolated in the rasterizer:
-
-varying  vec3  vN;		   // normal vector
-varying  vec3  vL;		   // vector from point to light
-varying  vec3  vE;		   // vector from point to eye
-varying  vec2  vST;		   // (s,t) texture coordinates
-
+in  vec3  vN;		   // normal vector
+in  vec3  vL;		   // vector from point to light
+in  vec3  vE;		   // vector from point to eye
+in  vec2  vST;		   // (s,t) texture coordinates
 
 void main()
 {
