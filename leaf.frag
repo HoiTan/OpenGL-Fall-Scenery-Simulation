@@ -3,7 +3,7 @@
 
 // lighting uniform variables -- these can be set once and left alone:
 uniform float   uKa, uKd, uKs;	 // coefficients of each type of lighting -- make sum to 1.0
-uniform vec4    uColor;		 // object color
+uniform vec3    uColor;		 // object color
 uniform vec4    uSpecularColor;	 // light color
 uniform float   uShininess;	 // specular exponent
 uniform float   uAlpha;		 // transparency
@@ -24,7 +24,7 @@ varying  vec2  vST;		   // (s,t) texture coordinates
 
 void main()
 {
-    vec3 myColor = uColor.rgb;
+    vec3 myColor = uColor;
     // vec3 myColor = vec3(0, 1, 0); // Object color (green)
 
     // Normalize the interpolated vectors:

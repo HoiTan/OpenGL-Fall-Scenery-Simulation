@@ -1,8 +1,8 @@
 #include "Turtle.hpp"
 #include <stack>
-#include "/Users/hoimautan/Desktop/CS/CS450/SampleMac/glm/gtc/matrix_transform.hpp"
-#include "/Users/hoimautan/Desktop/CS/CS450/SampleMac/glm/gtc/constants.hpp"
-#include "/Users/hoimautan/Desktop/CS/CS450/SampleMac/glm/gtc/type_ptr.hpp"
+#include "../glm/gtc/matrix_transform.hpp"
+#include "../glm/gtc/constants.hpp"
+#include "../glm/gtc/type_ptr.hpp"
 
 // Include OpenGL headers
 #ifdef __APPLE__
@@ -12,7 +12,7 @@
 #include <functional>
 #endif
 
-#include "/Users/hoimautan/Desktop/CS/CS450/SampleMac/glut.h"
+#include "../glut.h"
 
 Turtle::Turtle() 
     : m_angleIncrement(glm::radians(25.0f)), m_stepLength(1.0f)
@@ -74,9 +74,7 @@ void Turtle::interpret(const std::string &lsystemString) {
     std::stack<float> radiusStack;
 
     // Define initial branch radius and taper factor
-    float initialRadius = 0.5f;
-    float taperFactor = 0.7f;
-    radiusStack.push(initialRadius);
+    radiusStack.push(m_initialRadius);
 
     std::uniform_real_distribution<float> posOffsetDist(-0.5f, 0.5f);
     std::uniform_real_distribution<float> rotAngleDist(-30.0f, 30.0f); // Degrees
@@ -92,7 +90,7 @@ void Turtle::interpret(const std::string &lsystemString) {
                 glm::vec3 end = start + m_state.yAxis * m_stepLength;
                 
                 // Set branch color based on radius (optional)
-                float colorFactor = currentRadius / initialRadius;
+                float colorFactor = currentRadius / m_initialRadius;
                 glColor3f(0.55f * colorFactor, 0.27f * colorFactor, 0.07f * colorFactor); // Brownish color
                 
                 // Draw the branch as a cylinder
@@ -141,7 +139,7 @@ void Turtle::interpret(const std::string &lsystemString) {
             case '[':
                 // Push current state and radius
                 stateStack.push(m_state);
-                radiusStack.push(radiusStack.top() * taperFactor); // Tapering
+                radiusStack.push(radiusStack.top() * m_taperFactor); // Tapering
                 break;
 
             case ']':

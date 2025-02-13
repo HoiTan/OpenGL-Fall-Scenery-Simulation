@@ -565,6 +565,16 @@ GLSLProgram::UseFixedFunction( )
 };
 
 
+#ifdef COMPUTE
+void
+GLSLProgram::DispatchCompute( int num_groups_x, int num_groups_y, int num_groups_z )
+{
+	this->Use( );
+	glDispatchCompute( num_groups_x, num_groups_y, num_groups_z );
+}
+#endif
+
+
 int
 GLSLProgram::GetAttributeLocation( char *name )
 {
@@ -796,6 +806,10 @@ GLSLProgram::SetUniformVariable( char* name, int val )
 		switch( type )
 		{
 			case GL_INT:
+			case GL_SAMPLER_1D:
+			case GL_SAMPLER_2D:
+			case GL_SAMPLER_3D:
+			case GL_SAMPLER_CUBE:
 				glUniform1i( loc, val );
 				break;
 
@@ -1169,9 +1183,9 @@ main( )
                 //fprintf( stderr, "GLEW initialized OK\n" );
         //fprintf( stderr, "Status: Using GLEW %s\n", glewGetString(GLEW_VERSION));
 
-	fprintf( stderr, "Starting\n" );
+	//fprintf( stderr, "Starting\n" );
 	Pattern.Init( );
-	fprintf( stderr, "Called Init\n" );
+	//fprintf( stderr, "Called Init\n" );
 	return 0;
 }
 #endif

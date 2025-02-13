@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include "/Users/hoimautan/Desktop/CS/CS450/SampleMac/glm/glm.hpp"
+#include "../glm/glm.hpp"
 
 class Turtle {
 public:

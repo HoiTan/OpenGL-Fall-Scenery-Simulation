@@ -10,7 +10,7 @@ varying  vec3  vE;	  // vector from point to eye
 
 // where the light is:
 
-const vec3 LightPosition = vec3(  10., 10., 10. );
+const vec3 LightPosition = vec3(  10., 20., 0. );
 
 void
 main( )
@@ -23,4 +23,5 @@ main( )
 	vE = vec3( 0., 0., 0. ) - ECposition.xyz;       // vector from the point
 							// to the eye position
 	gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+	
 }

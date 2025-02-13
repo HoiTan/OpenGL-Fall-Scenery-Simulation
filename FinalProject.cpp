@@ -488,7 +488,7 @@ Display( )
 	glEnable( GL_LIGHT0 );
 	glEnable( GL_TEXTURE_2D );
     glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-
+	LeafProgram.SetUniformVariable( (char *)"uLightPos", 1.f, 10.f, 0.f);
 
 	glActiveTexture(GL_TEXTURE0); // Set texture to live on texture unit 0
 	glBindTexture(GL_TEXTURE_2D, Leaf2Tex);
@@ -517,13 +517,14 @@ Display( )
 	};
 	if(changeRule > ruleStringSet.size() - 1)
 		changeRule = 0;
-	std::string inputRule = ruleStringSet[changeRule];
+	// std::string inputRule = ruleStringSet[changeRule];
+	std::string inputRule = "F[>A][<A][+A][-A][vA][^A]L";
     std::string axiom = "A";
     std::unordered_map<char, std::string> rules = {
         {'A', inputRule}
     };
 
-	int iterations = 4;
+	int iterations = 5;
 	// int iterations = std::abs((int) nowTime - 5);
 	// axiom, rules, iteration
     LSystem lsystem(axiom, rules, iterations); 
@@ -531,7 +532,7 @@ Display( )
 
     
     Turtle turtle;			// Interpret L-system string into line vertices
-	turtle.setInitialFactor(35.0f, 10.0f, 1.f, 0.4f);		//	float angleDegrees, float stepLength, float radius, float taperFactor
+	turtle.setInitialFactor(35.0f, 10.0f, 5.f, 0.5f);		//	float angleDegrees, float stepLength, float radius, float taperFactor
 	glPushMatrix(); 
     	turtle.interpret(finalString);
 	glPopMatrix();
@@ -567,38 +568,53 @@ Display( )
 		glMultMatrixf(glm::value_ptr(rotationMatrix));
 
         // Scale the leaf model as needed
-		float scale = .20f;
+		float scale = 5.0f;
         glScalef(scale, scale, scale);
 
         // Call the display list for the leaf model
-		// float rand = leaf.position.y/60.0f ;
-		// // std::cout << leaf.position.y;
-        // if (rand < 0.30f) {
-        //     glColor3f(1.0f, 0.55f, 0.0f); 
-        // } else if (rand < 0.50f) {
-        //     glColor3f(1.0f, 0.6f, 0.2f); 
-        // } else if (rand < 0.80f) {
-        //     glColor3f(0.8f, 0.1f, 0.1f); // Bright Red
-        // } else if (rand < 0.90f) {
-        //     glColor3f(0.85f, 0.2f, 0.1f); // Orange-Red
-        // } else {
-        //     glColor3f(0.7f, 0.0f, 0.0f); // Deep Red
-        // }
+		float rand = leaf.position.y/60.0f ;
+		// std::cout << leaf.position.y;
+        if (rand < 0.30f) {
+            // glColor3f(1.0f, 0.55f, 0.0f); 
+			NowLeafColor[0] = 1.0f;
+			NowLeafColor[1] = 0.55f;
+			NowLeafColor[2] = 0.0f;
+			
+        } else if (rand < 0.50f) {
+            // glColor3f(1.0f, 0.6f, 0.2f); 
+			NowLeafColor[0] = 1.0f;
+			NowLeafColor[1] = 0.6f;
+			NowLeafColor[2] = 0.2f;
 
+        } else if (rand < 0.80f) {
+            // glColor3f(0.8f, 0.1f, 0.1f); // Bright Red
+			NowLeafColor[0] = 0.8f;
+			NowLeafColor[1] = 0.1f;
+			NowLeafColor[2] = 0.1f;
+        } else if (rand < 0.90f) {
+            // glColor3f(0.85f, 0.2f, 0.1f); // Orange-Red
+			NowLeafColor[0] = 0.85f;
+			NowLeafColor[1] = 0.2f;
+			NowLeafColor[2] = 0.1f;
+        } else {
+            // glColor3f(0.7f, 0.0f, 0.0f); // Deep Red
+			NowLeafColor[0] = 0.7f;
+			NowLeafColor[1] = 0.0f;
+			NowLeafColor[2] = 0.0f;
+        }
 
+		
+		
         // glBindTexture(GL_TEXTURE_2D, Leaf2Tex);
 		LeafProgram.Use( );
+		// LeafProgram.SetUniformVariable("uColor", NowLeafColor[0], NowLeafColor[1], NowLeafColor[2]);
+		LeafProgram.SetUniformVariable("uColor", NowLeafColor);
+
         glCallList(Leaf2DL);
 		LeafProgram.UnUse( );
         glPopMatrix();
     }
 
-    // testing
-    // glBindTexture(GL_TEXTURE_2D, Leaf2Tex);
-    // glPushMatrix();
-    //     glScalef(3,3,3);
-    //     glCallList(Leaf2DL);
-    // glPopMatrix();
 	LeafProgram.UnUse( );
     glDisable( GL_TEXTURE_2D );
 
@@ -612,20 +628,20 @@ Display( )
     glPopMatrix();
 	glDisable( GL_LIGHTING );
 	// background
-	glPushMatrix();
-		glTranslatef(0, 0, -50);
-        glRotatef(-90, 1, 0, 0);
-		glScalef(5, 5, 5);
-		glCallList(GridDL);
-    glPopMatrix();
-    glCallList(BoxList);
-		glPushMatrix();
-		glTranslatef(50, 0, 0);
-		glRotatef(-90, 0, 1, 0);
-        glRotatef(-90, 1, 0, 0);
-		glScalef(5, 5, 5);
-		glCallList(GridDL);
-    glPopMatrix();
+	// glPushMatrix();
+	// 	glTranslatef(0, 0, -50);
+    //     glRotatef(-90, 1, 0, 0);
+	// 	glScalef(5, 5, 5);
+	// 	glCallList(GridDL);
+    // glPopMatrix();
+    // glCallList(BoxList);
+	// 	glPushMatrix();
+	// 	glTranslatef(50, 0, 0);
+	// 	glRotatef(-90, 0, 1, 0);
+    //     glRotatef(-90, 1, 0, 0);
+	// 	glScalef(5, 5, 5);
+	// 	glCallList(GridDL);
+    // glPopMatrix();
 
 
     glCallList(BoxList);
@@ -1045,7 +1061,7 @@ InitGraphics( )
     LeafProgram.SetUniformVariable( "uKd", NowKd );
     LeafProgram.SetUniformVariable( "uKs", NowKs );
 	LeafProgram.SetUniformVariable("uAlpha", NowAlpha);
-	LeafProgram.SetUniformVariable("uColor", NowLeafColor);
+	LeafProgram.SetUniformVariable( (char *)"uColor", NowLeafColor);
 	LeafProgram.SetUniformVariable("uTranslucency", 1.f);
     LeafProgram.SetUniformVariable( "uShininess", NowShine ); // whatever you like from P3
 	LeafProgram.UnUse( );
@@ -1136,7 +1152,7 @@ InitLists( )
 
     Leaf2DL = glGenLists( 1 );
     glNewList( Leaf2DL, GL_COMPILE);
-        LoadObjFile( (char *) "LeafProject/MapleLeaves.obj");
+        LoadObjFile( (char *) "LeafProject/mapleLeafShape.obj");
     glEndList( );
 	// create the axes:
 
