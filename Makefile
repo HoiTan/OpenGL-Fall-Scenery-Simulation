@@ -16,7 +16,14 @@ Project6:		Project6.cpp
 
 
 FinalProject:		FinalProject.cpp
-		g++ -std=c++11  -framework OpenGL -framework GLUT FinalProject.cpp TreeBody/LSystem.cpp TreeBody/Turtle.cpp -o FinalProject -Wno-deprecated
+		g++ -std=c++11 \
+			-I/opt/homebrew/include \
+			FinalProject.cpp TreeBody/LSystem.cpp TreeBody/Turtle.cpp \
+			-o FinalProject \
+			-framework OpenGL -framework GLUT \
+			-L/opt/homebrew/lib -lglui
+
+		# g++ -std=c++11  -framework OpenGL -framework GLUT FinalProject.cpp TreeBody/LSystem.cpp TreeBody/Turtle.cpp -o FinalProject -Wno-deprecated
 		# g++ -std=c++11 -framework OpenGL -framework GLUT FinalProject.cpp -o FinalProject -Wno-deprecated
 		# g++ -framework OpenGL -framework GLUT FinalProject.cpp -o FinalProject -I. -Wno-deprecated
 
