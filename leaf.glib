@@ -17,6 +17,7 @@ program pattern					\
 		uSpecularColor {1. 1. 1. 1.}	\
 
 obj 
-#Sphere
+Sphere
+QuadXY .1 2. 300 400
 #Torus  1.  .3  64 64
-#Teapot
+Teapot

@@ -308,7 +308,8 @@ const int SHADOW_WIDTH = 1024;
 const int SHADOW_HEIGHT = 1024;
 
 // Display the scene
-void DisplayOneScene( GLSLProgram program );
+void DisplayOneScene(GLSLProgram * prog );
+void DisplayOneScene2(GLSLProgram * prog );
 
 //glui
 void GluiControlCallback(int controlID);
@@ -367,7 +368,8 @@ void Animate()
 }
 
 // Display callback
-void Display()
+void
+Display()
 {
     if(DebugOn != 0)
         fprintf(stderr, "Starting Display.\n");
@@ -378,14 +380,15 @@ void Display()
     // Erase the background:
     glDrawBuffer(GL_BACK);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     glEnable(GL_DEPTH_TEST);
+
+    // Optional: turn off depth test if DepthBufferOn == 0
 #ifdef DEMO_DEPTH_BUFFER
     if(DepthBufferOn == 0)
         glDisable(GL_DEPTH_TEST);
 #endif
 
-    // Use flat shading
+    // Use flat shading if desired:
     glShadeModel(GL_FLAT);
 
     // Set viewport to a square centered in the window:
@@ -396,7 +399,9 @@ void Display()
     GLint yb = (vy - v) / 2;
     glViewport(xl, yb, v, v);
 
-    // Projection:
+    // -----------------------------------------------------------
+    //  Fixed-function camera setup for the final on-screen pass:
+    // -----------------------------------------------------------
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     if(NowProjection == ORTHO)
@@ -404,166 +409,145 @@ void Display()
     else
         gluPerspective(70.f, 1.f, 0.1f, 1000.f);
 
-    // Place objects:
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    gluLookAt(camX, camY, camZ, 0.f, 5.f, 0.f, 0.f, 1.f, 0.f);
 
-    // Eye position, look-at, up-vector
-    // Use the camera variables:
-	gluLookAt(camX, camY, camZ,  0.f, 5.f, 0.f,   0.f, 1.f, 0.f);
-
-
-    // Rotate the scene:
+    // Scene rotations & scale:
     glRotatef(Yrot, 0.f, 1.f, 0.f);
     glRotatef(Xrot, 1.f, 0.f, 0.f);
-
-    // Scale the scene:
-    if(Scale < MINSCALE)
-        Scale = MINSCALE;
+    if(Scale < MINSCALE)  Scale = MINSCALE;
     glScalef(Scale, Scale, Scale);
 
-    // Fog:
-    if(DepthCueOn != 0) {
+    // Optionally set up fog, axes, etc.:
+    if(DepthCueOn) {
         glFogi(GL_FOG_MODE, FOGMODE);
         glFogfv(GL_FOG_COLOR, FOGCOLOR);
         glFogf(GL_FOG_DENSITY, FOGDENSITY);
-        glFogf(GL_FOG_START, FOGSTART);
-        glFogf(GL_FOG_END, FOGEND);
+        glFogf(GL_FOG_START,  FOGSTART);
+        glFogf(GL_FOG_END,    FOGEND);
         glEnable(GL_FOG);
     } else {
         glDisable(GL_FOG);
     }
-
-    // Draw axes:
-    if(AxesOn != 0) {
+    if(AxesOn) {
         glColor3fv(&Colors[NowColor][0]);
         glCallList(AxesList);
     }
-
-    // Normalize:
     glEnable(GL_NORMALIZE);
 
-    // Animation time in seconds:
-    int msec = glutGet(GLUT_ELAPSED_TIME) % MS_PER_CYCLE;
-    float nowTime = (float)msec / 1000.f; // 0..10.
+    // Light position (for both passes)
+    LightX = 0.f;
+    LightY = 30.f;
+    LightZ = 0.f;
 
-	// Set up light position
-	LightX = 0.f;
-	LightY = 30.f;
-	LightZ = 0.f;
-	////////////////////////////////////////////////////////////
-    // Setup light
-    glPushMatrix();
-        glTranslatef(-10.f, 30.f, 0.f);
-        glColor3f(1.f, 1.f, 1.f);
-        glScalef(.5f, .5f, .5f);
-        glCallList(OSUSphere);
-        glRotatef(90.f, 0.f, 0.f, 1.f);
-        SetPointLight(GL_LIGHT0, 0, 0, 0, 1, 1, 1);
-    glPopMatrix();
+    //=============================================================
+    // 1ST PASS: RENDER DEPTH FROM LIGHT’S POINT OF VIEW
+    //=============================================================
+    glBindFramebuffer(GL_FRAMEBUFFER, DepthFramebuffer);
+    glClear(GL_DEPTH_BUFFER_BIT);
 
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glEnable(GL_TEXTURE_2D);
-    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    // We don’t need a color buffer here:
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    glEnable(GL_DEPTH_TEST);
+    glShadeModel(GL_FLAT);
+    glDisable(GL_NORMALIZE); // Speed up depth pass
 
-    LeafProgram.SetUniformVariable((char*)"uLightPos", LightX, LightY, LightZ);
+    // Orthographic for a directional‐like light, or pick perspective if needed:
+    glm::mat4 lightProjection = glm::ortho(-10.f, 10.f, -10.f, 10.f, 1.f, 20.f);
+    glm::vec3 lightPos(LightX, LightY, LightZ);
+    glm::mat4 lightView = glm::lookAt(lightPos,
+                                      glm::vec3(0.f, 0.f, 0.f),
+                                      glm::vec3(0.f, 1.f, 0.f));
+    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
 
+    // Use the GetDepth shader:
+    GetDepth.Use();
+    GetDepth.SetUniformVariable("uLightSpaceMatrix", lightSpaceMatrix);
+    float color[3] = {0.f, 1.f, 1.f};
+    GetDepth.SetUniformVariable("uColor", color);
+
+    // Draw everything from the light’s POV:
+    DisplayOneScene(&GetDepth);
+    // If you have more geometry calls:
+    // DisplayOneScene2(&GetDepth);
+
+    GetDepth.UnUse();
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);  // back to screen FBO
+
+    //=============================================================
+    // 2ND PASS: RENDER THE SCENE FROM THE CAMERA’S POV, USING DEPTH MAP
+    //=============================================================
+    // We already set up the fixed‐function pipeline above (gluLookAt + rotate + scale).
+    // Now we must replicate the same transform in glm to pass to our shadow shader:
+
+    // Build the same projection in glm:
+    glm::mat4 cameraProjection = (NowProjection == ORTHO)
+        ? glm::ortho(-2.f, 2.f, -2.f, 2.f, 0.1f, 1000.f)
+        : glm::perspective(glm::radians(70.f), 1.f, 0.1f, 1000.f);
+
+    // Build the same modelview in glm:
+    glm::mat4 cameraView = glm::lookAt(glm::vec3(camX, camY, camZ),
+                                       glm::vec3(0.f, 5.f, 0.f),
+                                       glm::vec3(0.f, 1.f, 0.f));
+    // Match the glRotatef order:
+    glm::mat4 modelview = glm::rotate(cameraView, glm::radians(Yrot), glm::vec3(0.f, 1.f, 0.f));
+    modelview = glm::rotate(modelview, glm::radians(Xrot), glm::vec3(1.f, 0.f, 0.f));
+    modelview = glm::scale(modelview, glm::vec3(Scale, Scale, Scale));
+
+    // Bind the depth texture so the shadow shader can sample it:
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, Leaf2Tex);
-    LeafProgram.SetUniformVariable((char*)"uTexUnit", 0);
+    glBindTexture(GL_TEXTURE_2D, DepthTexture);
 
-	////////////////////////////////////////////////////////////
-	//set up shadow
-	//first pass, render from light's perspective, store depth of scene in texture
-	glBindFramebuffer(GL_FRAMEBUFFER, DepthFramebuffer);
-	glClear(GL_DEPTH_BUFFER_BIT);
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
-	glEnable(GL_DEPTH_TEST);
-	glShadeModel(GL_FLAT);
-	glDisable(GL_NORMALIZE);
-	// these matrices are the equivalent of projection and view matrices
-	glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 1.f, 20.f);
-	glm::vec3 lightPos(LightX, LightY, LightZ);
-	glm::mat4 lightView = glm::lookAt(lightPos, glm::vec3(0., 0., 0.), glm::vec3(0., 1., 0.));
-	//this matrix is the transformation matrix that the vertex shader will use instead of glModelViewProjectionMatrix:
-	glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
-	GetDepth.Use( );
-	GetDepth.SetUniformVariable((char*)"uLightSpaceMatrix", lightSpaceMatrix);
-	glm::vec3 color = glm::vec3(0., 1., 1.);
-	GetDepth.SetUniformVariable((char*)"uColor", color);
-	DisplayOneScene(GetDepth);
-	GetDepth.UnUse( );
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    LeafProgram.Use();
+    // Tell the shader which texture unit to use:
+    LeafProgram.SetUniformVariable("uShadowMap", 0); // matches glActiveTexture(GL_TEXTURE0)
+    LeafProgram.SetUniformVariable("uLightX", LightX);
+    LeafProgram.SetUniformVariable("uLightY", LightY);
+    LeafProgram.SetUniformVariable("uLightZ", LightZ);
+    LeafProgram.SetUniformVariable("uLightSpaceMatrix", lightSpaceMatrix);
 
-	//second pass, render from camera's perspective, use depth map to calculate shadows
-	RenderWithShadows.Use();
-	RenderWithShadows.SetUniformVariable((char*)"uShadowMap", 0 );
-	RenderWithShadows.SetUniformVariable((char*)"uLightX", LightX);
-	RenderWithShadows.SetUniformVariable((char*)"uLightY", LightY);
-	RenderWithShadows.SetUniformVariable((char*)"uLightZ", LightZ);
-	RenderWithShadows.SetUniformVariable((char*)"uLightSpaceMatrix", lightSpaceMatrix);
-	glm::vec3 eye = glm::vec3(0., 0., 8.);
-	glm::vec3 look = glm::vec3(0., 0., 0.);
-	glm::vec3 up = glm::vec3(0., 1., 0.);
-	glm::mat4 modelview = glm::lookAt(eye, look, up);
-	if (Scale < MINSCALE) Scale = MINSCALE;
-	glm::vec3 scale = glm::vec3(Scale, Scale, Scale);
-	modelview = glm::scale(modelview, scale);
-	glm::vec3 xaxis = glm::vec3(1., 0., 0.);
-	glm::vec3 yaxis = glm::vec3(0., 1., 0.);
-	modelview = glm::rotate(modelview, glm::radians(Yrot), yaxis);
-	modelview = glm::rotate(modelview, glm::radians(Xrot), xaxis);
-	RenderWithShadows.SetUniformVariable((char*)"uModelView", modelview);
-	glm::mat4 proj = glm::perspective(glm::radians(75.f), 1.f, .1f, 100.f);
-	RenderWithShadows.SetUniformVariable((char*)"uProj", proj);
-	DisplayOneScene(RenderWithShadows);
-	RenderWithShadows.UnUse( );
+    // Pass our camera matrices:
+    LeafProgram.SetUniformVariable("uModelView", modelview);
+    LeafProgram.SetUniformVariable("uProj",       cameraProjection);
 
+    // Now draw the same scene geometry, but using the shadow‐aware shader:
+    DisplayOneScene(&LeafProgram);
+    // DisplayOneScene2(&LeafProgram);
 
-	    // Floor
     glPushMatrix();
         glTranslatef(0.f, -5.f, 0.f);
         glScalef(5.f, 5.f, 5.f);
         glCallList(GridDL);
     glPopMatrix();
-    glDisable(GL_LIGHTING);
+    LeafProgram.UnUse();
 
+    // Optionally draw leaves (or anything else) in another shader pass
+    // If you want those objects also to receive shadows, you must do
+    // it with the shadow map bound and the same shadow logic.
+    // LeafProgram.Use();
+    // LeafProgram.SetUniformVariable("uLightPos", LightX, LightY, LightZ);
 
-    // Draw box list for demonstration (if needed)
-    glCallList(BoxList);
+    // glActiveTexture(GL_TEXTURE0);
+    // glBindTexture(GL_TEXTURE_2D, Leaf2Tex);
+    // LeafProgram.SetUniformVariable("uTexUnit", 0);
 
-#ifdef DEMO_Z_FIGHTING
-    if(DepthFightingOn != 0)
-    {
-        glPushMatrix();
-            glRotatef(90.f, 0.f, 1.f, 0.f);
-            glCallList(BoxList);
-        glPopMatrix();
-    }
-#endif
+    // // Draw your “leaf” objects:
+    // DisplayOneScene(&LeafProgram);
+    // LeafProgram.UnUse();
 
-    // 2D overlay text:
+    // 2D overlay text or anything else:
     glDisable(GL_DEPTH_TEST);
-    glColor3f(0.f, 1.f, 1.f);
-    // DoRasterString(0.f, 1.f, 0.f, (char *)"Text That Moves");
+    // ...
+    // Overlay code here
+    // ...
 
-    // Another overlay text
-    glDisable(GL_DEPTH_TEST);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluOrtho2D(0.f, 100.f, 0.f, 100.f);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glColor3f(1.f, 1.f, 1.f);
-    // DoRasterString(5.f, 5.f, 0.f, (char *)"Text That Doesn't");
-
-    // Swap buffers
+    // Swap buffers:
     glutSwapBuffers();
     glFlush();
 }
+
 
 // Keyboard callback
  void Keyboard(unsigned char c, int x, int y)
@@ -968,8 +952,8 @@ void InitGraphics()
     // Set initial lighting params in the shader
     NowKa = 0.5f;
     NowKd = 0.8f;
-    NowKs = 0.6f;
-    NowShine = 20.f;
+    NowKs = 0.4f;
+    NowShine = 10.f;
     NowAlpha = 1.f;
 	
     NowLeafColor[0] = 1.f;
@@ -1330,7 +1314,7 @@ void SetUpTexture(char* filename, GLuint* texture)
 }
 
 // Set up scene
-void DisplayOneScene( GLSLProgram program ){
+void DisplayOneScene(GLSLProgram * prog ){
     // Define the L-system:
     // (Three example rules; we'll pick one via changeRule)
     std::vector<std::string> ruleStringSet = {
@@ -1395,15 +1379,55 @@ void DisplayOneScene( GLSLProgram program ){
                 NowLeafColor[0] = 0.7f;  NowLeafColor[1] = 0.0f;  NowLeafColor[2] = 0.0f;
             }
 
-            LeafProgram.Use();
-            LeafProgram.SetUniformVariable((char*)"uColor", NowLeafColor);
+            prog->Use();
+            prog->SetUniformVariable((char*)"uColor", NowLeafColor);
             glCallList(Leaf2DL);
-            LeafProgram.UnUse();
+            prog->UnUse();
 
         glPopMatrix();
     }
-    LeafProgram.UnUse();
     glDisable(GL_TEXTURE_2D);
+
+    // Floor
+    // glPushMatrix();
+    //     glTranslatef(0.f, -5.f, 0.f);
+    //     glScalef(5.f, 5.f, 5.f);
+    //     glCallList(GridDL);
+    // glPopMatrix();
+
+    prog->Use(0);
+}
+
+void
+DisplayOneScene2(GLSLProgram * prog )
+{
+	//render a sphere:
+	glm::mat4 anim = glm::mat4(1.f);
+	prog->SetUniformVariable((char*)"uAnim", anim);
+	float color[3] = { 1., 1., 0.};
+	prog->SetUniformVariable((char*)"uColor", color );
+	glCallList(SphereDL);
+
+	//Render cubes:
+	anim = glm::mat4(1.f);
+	anim = glm::translate(anim, glm::vec3(-1., 2.5 + 2.f * sin(M_PI * Time), 6.f));
+	anim = glm::scale(anim, glm::vec3(0.5));
+	prog->SetUniformVariable((char*)"uAnim", anim);
+    color[0] = 1.; color[1] = 0.; color[2] = 0.;
+	prog->SetUniformVariable((char*)"uColor", color );
+	glutSolidCube(1.);
+
+	anim = glm::mat4(1.f);
+	anim = glm::translate(anim, glm::vec3(2.0f, 6.0f, 3.0));
+	float angle = (float)(45.f * 2.f * sin(M_PI * Time));
+	anim = glm::rotate(anim, glm::radians(angle), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
+	anim = glm::scale(anim, glm::vec3(0.5f));
+	prog->SetUniformVariable((char*)"uAnim", anim);
+	color[0] = 0.; color[1] = 1.; color[2] = 0.;
+	prog->SetUniformVariable((char*)"uColor", color);
+	glutSolidCube(2.);
+
+	prog->Use(0);
 }
 
 void GluiControlCallback(int controlID)

@@ -1,3 +1,4 @@
 
-ERROR: 0:18: GLSL 110 does not allow sub- or super-matrix constructors
+ERROR: 0:2: '' :  version '330' is not supported
+ERROR: 0:2: '' : syntax error: #version
 
