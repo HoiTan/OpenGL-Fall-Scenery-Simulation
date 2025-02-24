@@ -2,26 +2,47 @@
 Perspective 70.
 LookAt 0 0 3  0 0 0  0 1 0
 
+Texture2D 6 1024 1024 
+RenderToTexture 6
+Clear
+
+Vertex GetDepth.vert
+Fragment GetDepth.frag
+Program GetDepth 				\
+	#uLightPos  [10. 10. 10.] 	\ #Array variables are enclosed in square brackets. [ ] 
+
+RenderToTexture
+
 Vertex		leaf.vert
 Fragment	leaf.frag
 program pattern					\
-		uS0 <0. 0.5 1.>				\
-		uT0 <0. 0.5 1.>				\
-		uD <0.1 0.2 1.0>			\
 		uKa <0. 0.1 1.0>			\
 		uKd <0. 0.6 1.0>			\
 		uKs <0. 0.3 1.0>			\
 		uAlpha <0. 1. 1.0>			\
 		uShininess <0.5 10. 200.>		\
 		uColor {1. 1. 1. 1.} 			\
-		uSpecularColor {1. 1. 1. 1.}	\
+		uTranslucency	 <0. 1. 1.>  	\
+		uShadowMap 6 	\
+		uLightX  <0. 10. 30.0>\
+		uLightY <0. 10. 30.0>\
+		uLightZ <0. 10. 30.0>\
+		vFragPosLightSpace \ 
+		uShadowsOn 0 \
+		#uAnim	\
+		#uModelView \
+		#uProj \
+		#uD <0.1 0.2 1.0>			\
 
 PushMatrix
 	Rotate -45 0 1 0 
-	obj 
+	obj mapleLeafShape.obj
 	Rotate 45 0 1 0 
 PopMatrix
 QuadXY  -0.2  1.  128  128
-#Sphere
+PushMatrix
+	Translate 0 0 -3 
+	Box  1 1 1 
+PopMatrix
 #Torus  1.  .3  64 64
 #Teapot

@@ -1,0 +1,3 @@
+
+0(95) : error C1503: undefined variable "finalAlpha"
+

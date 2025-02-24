@@ -1,0 +1,4 @@
+
+0(15) : error C0204: version directive must be first statement and may not be repeated
+0(23) : warning C1503: undefined variable "LightPosition"
+
