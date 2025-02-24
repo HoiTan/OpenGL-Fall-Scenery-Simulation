@@ -2,8 +2,8 @@
 Perspective 70.
 LookAt 0 0 3  0 0 0  0 1 0
 
-Texture2D 6 1024 1024 
-RenderToTexture 6
+Texture2D 1 1024 1024 
+RenderToTexture 1
 Clear
 
 Vertex GetDepth.vert
@@ -15,20 +15,19 @@ RenderToTexture
 
 Vertex		leaf.vert
 Fragment	leaf.frag
-program pattern					\
+program pattern uShadowMap 1			\
 		uKa <0. 0.1 1.0>			\
-		uKd <0. 0.6 1.0>			\
+		uKd <0. 0.1 1.0>			\
 		uKs <0. 0.3 1.0>			\
 		uAlpha <0. 1. 1.0>			\
 		uShininess <0.5 10. 200.>		\
 		uColor {1. 1. 1. 1.} 			\
 		uTranslucency	 <0. 1. 1.>  	\
-		uShadowMap 6 	\
 		uLightX  <0. 10. 30.0>\
 		uLightY <0. 10. 30.0>\
 		uLightZ <0. 10. 30.0>\
 		vFragPosLightSpace \ 
-		uShadowsOn 0 \
+		#uShadowsOn 0 \
 		#uAnim	\
 		#uModelView \
 		#uProj \

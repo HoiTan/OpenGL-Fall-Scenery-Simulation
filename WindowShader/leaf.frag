@@ -35,7 +35,7 @@ bool IsInShadow(vec4 fragPosLightSpace)
     //then make it from 0 to 1:
     projection = 0.5*projection + 0.5;
     //get closest depth from light's perspective
-    float closestDepth = texture(uShadowMap, projection.xy).r;
+    float closestDepth = texture2D(uShadowMap, projection.xy).r;
     //get current depth:
     float currentDepth = projection.z;
     bool isInShadow = (currentDepth - BIAS) > closestDepth;
@@ -54,7 +54,7 @@ void main()
     vec3 lighting = uKa * myColor;
     float finalAlpha = uAlpha;
     bool isInShadow = IsInShadow(vFragPosLightSpace);
-    // isInShadow = false; // for now, just to see the effect of the lighting
+    isInShadow = false; // for now, just to see the effect of the lighting
     if( uShadowsOn != 0 )
         isInShadow = false; // if in ShadowOff mode, nothing should be cnsidered in a shadow
     if( ! isInShadow )
