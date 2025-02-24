@@ -1,4 +1,25 @@
 
-ERROR: 0:2: '' :  version '330' is not supported
-ERROR: 0:2: '' : syntax error: #version
+ERROR: 0:7: Invalid storage qualifiers 'in' in global variable context
+ERROR: 0:8: Invalid storage qualifiers 'in' in global variable context
+ERROR: 0:9: Invalid storage qualifiers 'in' in global variable context
+ERROR: 0:10: Invalid storage qualifiers 'in' in global variable context
+ERROR: 0:14: Incompatible types in initialization (and no available implicit conversion)
+ERROR: 0:30: Invalid call of undeclared identifier 'texture'
+ERROR: 0:34: Use of undeclared identifier 'closestDepth'
+ERROR: 0:39: Use of undeclared identifier 'isInShadow'
+ERROR: 0:45: Use of undeclared identifier 'vNs'
+ERROR: 0:46: Use of undeclared identifier 'vLs'
+ERROR: 0:47: Use of undeclared identifier 'vEs'
+ERROR: 0:54: Use of undeclared identifier 'vFragPosLightSpace'
+ERROR: 0:56: Use of undeclared identifier 'isInShadow'
+ERROR: 0:57: Use of undeclared identifier 'isInShadow'
+ERROR: 0:59: Use of undeclared identifier 'normal'
+ERROR: 0:59: Use of undeclared identifier 'light'
+ERROR: 0:65: Use of undeclared identifier 'light'
+ERROR: 0:65: Use of undeclared identifier 'normal'
+ERROR: 0:66: Use of undeclared identifier 'eye'
+ERROR: 0:66: Use of undeclared identifier 'refl'
+ERROR: 0:67: Use of undeclared identifier 'dd'
+ERROR: 0:69: Use of undeclared identifier 'dd'
+ERROR: 0:69: Use of undeclared identifier 'SHININESS'
 

@@ -36,7 +36,7 @@ void main()
     float s = 0.;
     vec3 lighting = KA * uColor;
     bool isInShadow = IsInShadow(vFragPosLightSpace);
-    isInShadow = false; // for now, just to see the effect of the lighting
+    // isInShadow = false; // for now, just to see the effect of the lighting
     if( uShadowsOn != 0 )
         isInShadow = false; // if in ShadowOff mode, nothing should be cnsidered in a shadow
     if( ! isInShadow )

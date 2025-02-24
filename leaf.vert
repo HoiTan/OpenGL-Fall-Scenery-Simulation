@@ -28,7 +28,7 @@ main( )
     vec4 ECposition = uModelView * uAnim * gl_Vertex;
 	vST = gl_MultiTexCoord0.st;
 
-	// vN = normalize( gl_NormalMatrix * gl_Normal );  // normal vector
+	vN = normalize( gl_NormalMatrix * gl_Normal );  // normal vector
 	vN = normalize(mat3(uAnim[0].xyz, uAnim[1].xyz, uAnim[2].xyz) * gl_Normal );
 	vL = LightPosition - ECposition.xyz;	    // vector from the point
 							// to the light position

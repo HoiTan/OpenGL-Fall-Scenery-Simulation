@@ -291,7 +291,6 @@ unsigned char* mpLeaf2Texture;
 GLuint OSUSphere;
 GLuint Leaf2DL;
 GLuint Leaf2Tex;
-GLuint SphereDL;
 GLuint GridDL;
 
 // Keytime objects
@@ -455,24 +454,21 @@ Display()
     glDisable(GL_NORMALIZE); // Speed up depth pass
 
     // Orthographic for a directional‐like light, or pick perspective if needed:
-    glm::mat4 lightProjection = glm::ortho(-10.f, 10.f, -10.f, 10.f, 1.f, 20.f);
+    glm::mat4 lightProjection = glm::ortho(-30.f, 30.f, -30.f, 30.f, 0.1f, 80.f);
     glm::vec3 lightPos(LightX, LightY, LightZ);
     glm::mat4 lightView = glm::lookAt(lightPos,
                                       glm::vec3(0.f, 0.f, 0.f),
                                       glm::vec3(0.f, 1.f, 0.f));
     glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 
     // Use the GetDepth shader:
     GetDepth.Use();
     GetDepth.SetUniformVariable("uLightSpaceMatrix", lightSpaceMatrix);
     float color[3] = {0.f, 1.f, 1.f};
     GetDepth.SetUniformVariable("uColor", color);
-
-    // Draw everything from the light’s POV:
-    DisplayOneScene(&GetDepth);
-    // If you have more geometry calls:
-    // DisplayOneScene2(&GetDepth);
-
+    DisplayOneScene2(&GetDepth);
+    // DisplayOneScene(&GetDepth);
     GetDepth.UnUse();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);  // back to screen FBO
 
@@ -481,6 +477,13 @@ Display()
     //=============================================================
     // We already set up the fixed‐function pipeline above (gluLookAt + rotate + scale).
     // Now we must replicate the same transform in glm to pass to our shadow shader:
+    RenderWithShadows.Use();
+    RenderWithShadows.SetUniformVariable((char*)"uShadowMap", (int)0);
+    RenderWithShadows.SetUniformVariable((char*)"uShadowsOn", ShadowsOn ? 1 : 0 );
+    RenderWithShadows.SetUniformVariable((char*)"uLightX", LightX);
+    RenderWithShadows.SetUniformVariable((char*)"uLightY", LightY);
+    RenderWithShadows.SetUniformVariable((char*)"uLightZ", LightZ);
+    RenderWithShadows.SetUniformVariable((char*)"uLightSpaceMatrix", lightSpaceMatrix);
 
     // Build the same projection in glm:
     glm::mat4 cameraProjection = (NowProjection == ORTHO)
@@ -499,50 +502,14 @@ Display()
     // Bind the depth texture so the shadow shader can sample it:
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, DepthTexture);
-
-    LeafProgram.Use();
-    // Tell the shader which texture unit to use:
-    LeafProgram.SetUniformVariable("uShadowMap", 0); // matches glActiveTexture(GL_TEXTURE0)
-    LeafProgram.SetUniformVariable("uLightX", LightX);
-    LeafProgram.SetUniformVariable("uLightY", LightY);
-    LeafProgram.SetUniformVariable("uLightZ", LightZ);
-    LeafProgram.SetUniformVariable("uLightSpaceMatrix", lightSpaceMatrix);
-
     // Pass our camera matrices:
-    LeafProgram.SetUniformVariable("uModelView", modelview);
-    LeafProgram.SetUniformVariable("uProj",       cameraProjection);
+    RenderWithShadows.SetUniformVariable((char*)"uModelView", modelview);
+    RenderWithShadows.SetUniformVariable((char*)"uProj",       cameraProjection);
 
     // Now draw the same scene geometry, but using the shadow‐aware shader:
-    DisplayOneScene(&LeafProgram);
-    // DisplayOneScene2(&LeafProgram);
-
-    glPushMatrix();
-        glTranslatef(0.f, -5.f, 0.f);
-        glScalef(5.f, 5.f, 5.f);
-        glCallList(GridDL);
-    glPopMatrix();
-    LeafProgram.UnUse();
-
-    // Optionally draw leaves (or anything else) in another shader pass
-    // If you want those objects also to receive shadows, you must do
-    // it with the shadow map bound and the same shadow logic.
-    // LeafProgram.Use();
-    // LeafProgram.SetUniformVariable("uLightPos", LightX, LightY, LightZ);
-
-    // glActiveTexture(GL_TEXTURE0);
-    // glBindTexture(GL_TEXTURE_2D, Leaf2Tex);
-    // LeafProgram.SetUniformVariable("uTexUnit", 0);
-
-    // // Draw your “leaf” objects:
-    // DisplayOneScene(&LeafProgram);
-    // LeafProgram.UnUse();
-
-    // 2D overlay text or anything else:
-    glDisable(GL_DEPTH_TEST);
-    // ...
-    // Overlay code here
-    // ...
-
+    // DisplayOneScene(&RenderWithShadows);
+    DisplayOneScene2(&RenderWithShadows);
+    RenderWithShadows.UnUse();
     // Swap buffers:
     glutSwapBuffers();
     glFlush();
@@ -989,32 +956,26 @@ void InitGraphics()
 	
 	////////////////////////////////////////////////////////////
 	//set up shadow texture:
-	// 1. Generate a framebuffer object and a depth texture:
+	//Generate a framebuffer object and a depth texture:
     glGenFramebuffers(1, &DepthFramebuffer);
-    glGenTextures(1, &DepthTexture);
+	glGenTextures(1, &DepthTexture);
 
-    // 2. Create a texture to serve as the depth buffer:
-    glBindTexture(GL_TEXTURE_2D, DepthTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,
-                 SHADOW_WIDTH, SHADOW_HEIGHT, 0,
-                 GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+	//Create a texture that will be the framebuffer's depth buffer
+	glBindTexture(GL_TEXTURE_2D, DepthTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	//Attach texture to framebuffer as depth buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, DepthFramebuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, DepthTexture, 0);
 
-    // 3. Set texture parameters:
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	// force opengl to accept a framebuffer that doesn't have a color buffer in it:
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
 
-    // 4. Attach this depth texture to the FBO:
-    glBindFramebuffer(GL_FRAMEBUFFER, DepthFramebuffer);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, DepthTexture, 0);
-
-    // 5. We don't need any color buffer for this pass:
-    glDrawBuffer(GL_NONE);
-    glReadBuffer(GL_NONE);
-
-    // Finally, unbind the framebuffer for now:
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	
 
 #ifdef WIN32
@@ -1074,8 +1035,7 @@ void InitLists()
     // Sphere
     OSUSphere = glGenLists(1);
     glNewList(OSUSphere, GL_COMPILE);
-        glShadeModel(GL_SMOOTH);
-        OsuSphere(1.f, 20, 20);
+        OsuSphere(5., 80, 80);
     glEndList();
 
     // Leaf object
@@ -1303,9 +1263,9 @@ void SetUpTexture(char* filename, GLuint* texture)
         fprintf(stderr, "Opened '%s': width = %d ; height = %d\n", filename, width, height);
     }
 
-    glGenTextures(1, texture);
+    glGenTextures(2, texture);
     glBindTexture(GL_TEXTURE_2D, *texture);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 2);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -1389,11 +1349,11 @@ void DisplayOneScene(GLSLProgram * prog ){
     glDisable(GL_TEXTURE_2D);
 
     // Floor
-    // glPushMatrix();
-    //     glTranslatef(0.f, -5.f, 0.f);
-    //     glScalef(5.f, 5.f, 5.f);
-    //     glCallList(GridDL);
-    // glPopMatrix();
+    glPushMatrix();
+        glTranslatef(0.f, -5.f, 0.f);
+        glScalef(5.f, 5.f, 5.f);
+        glCallList(GridDL);
+    glPopMatrix();
 
     prog->Use(0);
 }
@@ -1406,7 +1366,7 @@ DisplayOneScene2(GLSLProgram * prog )
 	prog->SetUniformVariable((char*)"uAnim", anim);
 	float color[3] = { 1., 1., 0.};
 	prog->SetUniformVariable((char*)"uColor", color );
-	glCallList(SphereDL);
+	glCallList(OSUSphere);
 
 	//Render cubes:
 	anim = glm::mat4(1.f);
