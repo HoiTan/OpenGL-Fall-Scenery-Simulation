@@ -268,7 +268,7 @@ float* MulArray3(float factor, float a, float b, float c )
     array[3] = 1.f;
     return array;
 }
-
+ 
 // Other helper source files (material, light, geometry, etc.)
 #include "setmaterial.cpp"
 #include "setlight.cpp"
@@ -307,7 +307,9 @@ const int SHADOW_WIDTH = 1024;
 const int SHADOW_HEIGHT = 1024;
 
 // Display the scene
-void DisplayOneScene(GLSLProgram * prog );
+Turtle drawTreeBody();
+Turtle drawTernaryTreeBody();
+void DisplayOneScene(GLSLProgram * prog, Turtle& turtle);
 void DisplayOneScene2(GLSLProgram * prog );
 
 //glui
@@ -440,6 +442,8 @@ Display()
     LightY = 30.f;
     LightZ = 0.f;
 
+    Turtle turtle = drawTreeBody();
+
     //=============================================================
     // 1ST PASS: RENDER DEPTH FROM LIGHT’S POINT OF VIEW
     //=============================================================
@@ -455,21 +459,21 @@ Display()
 
     // Orthographic for a directional‐like light, or pick perspective if needed:
     glm::mat4 lightProjection = glm::ortho(-30.f, 30.f, -30.f, 30.f, 0.1f, 80.f);
-    glm::vec3 lightPos(LightX, LightY, LightZ);
-    glm::mat4 lightView = glm::lookAt(lightPos,
-                                      glm::vec3(0.f, 0.f, 0.f),
-                                      glm::vec3(0.f, 1.f, 0.f));
-    glm::mat4 lightSpaceMatrix = lightProjection * lightView;
-    glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+    // glm::vec3 lightPos(LightX, LightY, LightZ);
+    // glm::mat4 lightView = glm::lookAt(lightPos,
+    //                                   glm::vec3(0.f, 0.f, 0.f),
+    //                                   glm::vec3(0.f, 1.f, 0.f));
+    // glm::mat4 lightSpaceMatrix = lightProjection * lightView;
+    // glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 
-    // Use the GetDepth shader:
-    GetDepth.Use();
-    GetDepth.SetUniformVariable("uLightSpaceMatrix", lightSpaceMatrix);
-    float color[3] = {0.f, 1.f, 1.f};
-    GetDepth.SetUniformVariable("uColor", color);
-    DisplayOneScene2(&GetDepth);
-    // DisplayOneScene(&GetDepth);
-    GetDepth.UnUse();
+    // // Use the GetDepth shader:
+    // GetDepth.Use();
+    // GetDepth.SetUniformVariable("uLightSpaceMatrix", lightSpaceMatrix);
+    // float color[3] = {0.f, 1.f, 1.f};
+    // GetDepth.SetUniformVariable("uColor", color);
+    // // DisplayOneScene2(&GetDepth);
+    // DisplayOneScene(&GetDepth, turtle);
+    // GetDepth.UnUse();
     glBindFramebuffer(GL_FRAMEBUFFER, 0);  // back to screen FBO
 
     //=============================================================
@@ -477,44 +481,42 @@ Display()
     //=============================================================
     // We already set up the fixed‐function pipeline above (gluLookAt + rotate + scale).
     // Now we must replicate the same transform in glm to pass to our shadow shader:
-    RenderWithShadows.Use();
-    RenderWithShadows.SetUniformVariable((char*)"uShadowMap", (int)0);
-    RenderWithShadows.SetUniformVariable((char*)"uShadowsOn", ShadowsOn ? 1 : 0 );
-    RenderWithShadows.SetUniformVariable((char*)"uLightX", LightX);
-    RenderWithShadows.SetUniformVariable((char*)"uLightY", LightY);
-    RenderWithShadows.SetUniformVariable((char*)"uLightZ", LightZ);
-    RenderWithShadows.SetUniformVariable((char*)"uLightSpaceMatrix", lightSpaceMatrix);
+    // RenderWithShadows.Use();
+    // RenderWithShadows.SetUniformVariable((char*)"uShadowMap", (int)0);
+    // RenderWithShadows.SetUniformVariable((char*)"uShadowsOn", ShadowsOn ? 1 : 0 );
+    // RenderWithShadows.SetUniformVariable((char*)"uLightX", LightX);
+    // RenderWithShadows.SetUniformVariable((char*)"uLightY", LightY);
+    // RenderWithShadows.SetUniformVariable((char*)"uLightZ", LightZ);
+    // RenderWithShadows.SetUniformVariable((char*)"uLightSpaceMatrix", lightSpaceMatrix);
 
-    // Build the same projection in glm:
-    glm::mat4 cameraProjection = (NowProjection == ORTHO)
-        ? glm::ortho(-2.f, 2.f, -2.f, 2.f, 0.1f, 1000.f)
-        : glm::perspective(glm::radians(70.f), 1.f, 0.1f, 1000.f);
+    // // Build the same projection in glm:
+    // glm::mat4 cameraProjection = (NowProjection == ORTHO)
+    //     ? glm::ortho(-2.f, 2.f, -2.f, 2.f, 0.1f, 1000.f)
+    //     : glm::perspective(glm::radians(70.f), 1.f, 0.1f, 1000.f);
 
-    // Build the same modelview in glm:
-    glm::mat4 cameraView = glm::lookAt(glm::vec3(camX, camY, camZ),
-                                       glm::vec3(0.f, 5.f, 0.f),
-                                       glm::vec3(0.f, 1.f, 0.f));
-    // Match the glRotatef order:
-    glm::mat4 modelview = glm::rotate(cameraView, glm::radians(Yrot), glm::vec3(0.f, 1.f, 0.f));
-    modelview = glm::rotate(modelview, glm::radians(Xrot), glm::vec3(1.f, 0.f, 0.f));
-    modelview = glm::scale(modelview, glm::vec3(Scale, Scale, Scale));
+    // // Build the same modelview in glm:
+    // glm::mat4 cameraView = glm::lookAt(glm::vec3(camX, camY, camZ),
+    //                                    glm::vec3(0.f, 5.f, 0.f),
+    //                                    glm::vec3(0.f, 1.f, 0.f));
+    // // Match the glRotatef order:
+    // glm::mat4 modelview = glm::rotate(cameraView, glm::radians(Yrot), glm::vec3(0.f, 1.f, 0.f));
+    // modelview = glm::rotate(modelview, glm::radians(Xrot), glm::vec3(1.f, 0.f, 0.f));
+    // modelview = glm::scale(modelview, glm::vec3(Scale, Scale, Scale));
 
-    // Bind the depth texture so the shadow shader can sample it:
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, DepthTexture);
-    // Pass our camera matrices:
-    RenderWithShadows.SetUniformVariable((char*)"uModelView", modelview);
-    RenderWithShadows.SetUniformVariable((char*)"uProj",       cameraProjection);
-
-    // Now draw the same scene geometry, but using the shadow‐aware shader:
-    // DisplayOneScene(&RenderWithShadows);
-    DisplayOneScene2(&RenderWithShadows);
-    RenderWithShadows.UnUse();
+    // // Bind the depth texture so the shadow shader can sample it:
+    // glActiveTexture(GL_TEXTURE0);
+    // glBindTexture(GL_TEXTURE_2D, DepthTexture);
+    // RenderWithShadows.SetUniformVariable((char*)"uModelView", modelview);
+    // RenderWithShadows.SetUniformVariable((char*)"uProj",       cameraProjection);
+    // DisplayOneScene(&RenderWithShadows, turtle);
+    // // DisplayOneScene2(&RenderWithShadows);
+    // RenderWithShadows.UnUse();
+    LeafProgram.Use();
+    DisplayOneScene(&LeafProgram, turtle);
     // Swap buffers:
     glutSwapBuffers();
     glFlush();
 }
-
 
 // Keyboard callback
  void Keyboard(unsigned char c, int x, int y)
@@ -1274,87 +1276,122 @@ void SetUpTexture(char* filename, GLuint* texture)
 }
 
 // Set up scene
-void DisplayOneScene(GLSLProgram * prog ){
+Turtle drawTreeBody()
+{
     // Define the L-system:
     // (Three example rules; we'll pick one via changeRule)
-    std::vector<std::string> ruleStringSet = {
-        "F[>A][<A][+A][-AvA][^A]L",
-        "F[>A][<A][+A][-A][vA][^A]L",
-        "F[+A][-A]<A>AvA^AL"
-    };
-    if(changeRule >= (int)ruleStringSet.size())
-        changeRule = 0;
-    std::string inputRule = ruleStringSet[changeRule];
-
+    // std::vector<std::string> ruleStringSet = {
+    //     "F[>A][<A][+A][-AvA][^A]L",
+    //     "F[>A][<A][+A][-A][vA][^A]L",
+    //     "F[+A][-A]<A>AvA^AL"
+    // };
+    // if(changeRule >= (int)ruleStringSet.size())
+    //     changeRule = 0;
+    // std::string inputRule = ruleStringSet[changeRule];
+    // std::string axiom = "A";
+    // std::unordered_map<char, std::string> rules = {
+    //     {'A', inputRule}
+    // };
     // Axiom & rules
-    std::string axiom = "A";
-    std::unordered_map<char, std::string> rules = {
-        {'A', inputRule}
+    std::string axiom = "!(1)F(6)/(45)A";
+    std::unordered_map<std::string, std::string> rules = {
+        {
+            {"A",    "!(vr)F(l)[&(a)F(l)A[&(a)F(l)A]]/(d1)[&(a)F(l)A[&(a)F(l)A]]/(d2)[&(a)F(l)A[&(a)F(l)A]]"},
+            {"F(l)",  "F(l*lr)"},
+            {"!(vr)", "!(vr*vr)"},
+        }
     };
-    int iterations = 5;
-
-    // Build L-system
-    LSystem lsystem(axiom, rules, iterations);
+    // 1) Create the L-System
+    LSystem lsystem(axiom, rules, /*iterations*/6);
     std::string finalString = lsystem.generate();
-
-	////////////////////////////////////////////////////////////
-    // Interpret with Turtle, draw tree
+    // std::string finalString = "!(1)F(200)/(45)!(vr*vr)F(l*lr)[&(a)F(l*lr)!(vr)F(l)[&(a)F(l)A]/(d1)[&(a)F(l)A]/(d2)[&(a)F(l)A]]/(d1)[&(a)F(l*lr)!(vr)F(l)[&(a)F(l)A]/(d1)[&(a)F(l)A]/(d2)[&(a)F(l)A]]/(d2)[&(a)F(l*lr)!(vr)F(l)[&(a)F(l)A]/(d1)[&(a)F(l)A]/(d2)[&(a)F(l)A]]";
+    // std::cout << "Ternary L-System final string: " << finalString << std::endl;
+    // 2) Create a Turtle to interpret that L-System
+    //    Adjust these to make a “bigger” tree
     Turtle turtle;
-    turtle.setInitialFactor(35.f, 10.f, 5.f, 0.5f);
-    glPushMatrix();
+    turtle.setInitialFactor(
+        35.f,   // angle in degrees
+        20.f,   // step length
+        7.f,    // initial radius
+        .8f    // taper factor
+    );
+     // Now set tropism 
+    turtle.setTropismVector(glm::vec3(0.0f, -1.0f, 0.0f)); // e.g. gravity downward
+    turtle.setTropismCoefficient(0.12f); // how strongly it bends
+
+    // 3) Draw
+    glPushMatrix(); 
         turtle.interpret(finalString);
     glPopMatrix();
 
+    return turtle;
+}
+
+void DisplayOneScene(GLSLProgram * prog, Turtle& turtle) {
+
     // Draw Leaves
     std::vector<Turtle::Leaf> leafPositions = turtle.GetLeaves();
-    for(const auto& leaf : leafPositions)
+    for (const auto& leaf : leafPositions)
     {
         glPushMatrix();
-            // Translate to leaf position
+            // 1) Translate to leaf position
             glTranslatef(leaf.position.x, leaf.position.y, leaf.position.z);
 
-            // Orientation
+            // 2) Build orientation matrix
+            //    - leaf.right goes in the first column
+            //    - leaf.up goes in the second column
+            //    - cross(right, up) goes in the third column
             glm::mat3 orientationMatrix;
             orientationMatrix[0] = glm::normalize(leaf.right); 
             orientationMatrix[1] = glm::normalize(leaf.up);
             orientationMatrix[2] = glm::normalize(glm::cross(leaf.right, leaf.up));
             glm::mat4 rotationMatrix = glm::mat4(orientationMatrix);
+
+            // Multiply current matrix by this orientation
             glMultMatrixf(glm::value_ptr(rotationMatrix));
 
-            // Scale
-            float scale = 5.f;
-            glScalef(scale, scale, scale);
+            // 3) Scale 
+            //    If you have leaf.scale as a float, combine it with an overall factor
+            float finalScale = 5.0f;  // base scaling
+            #ifdef HAS_LEAF_SCALE // If your Leaf has a 'scale' field
+            finalScale *= leaf.scale;
+            #endif
+            glScalef(finalScale, finalScale, finalScale);
 
-            // Color variation
+            // 4) Determine leaf color from leaf.position.y
             float randval = leaf.position.y / 60.f;
-            if(randval < 0.30f) {
+            if (randval < 0.30f) {
                 NowLeafColor[0] = 1.0f;  NowLeafColor[1] = 0.55f; NowLeafColor[2] = 0.0f;
-            } else if(randval < 0.50f) {
+            } else if (randval < 0.50f) {
                 NowLeafColor[0] = 1.0f;  NowLeafColor[1] = 0.6f;  NowLeafColor[2] = 0.2f;
-            } else if(randval < 0.80f) {
+            } else if (randval < 0.80f) {
                 NowLeafColor[0] = 0.8f;  NowLeafColor[1] = 0.1f;  NowLeafColor[2] = 0.1f;
-            } else if(randval < 0.90f) {
+            } else if (randval < 0.90f) {
                 NowLeafColor[0] = 0.85f; NowLeafColor[1] = 0.2f;  NowLeafColor[2] = 0.1f;
             } else {
                 NowLeafColor[0] = 0.7f;  NowLeafColor[1] = 0.0f;  NowLeafColor[2] = 0.0f;
             }
 
+            // 5) Use GLSL shader and draw your leaf shape (e.g. a display list)
             prog->Use();
             prog->SetUniformVariable((char*)"uColor", NowLeafColor);
-            glCallList(Leaf2DL);
+
+            glCallList(Leaf2DL);  // <-- your 2D leaf display list
+
             prog->UnUse();
 
         glPopMatrix();
     }
     glDisable(GL_TEXTURE_2D);
 
-    // Floor
+    // Optionally draw the floor
     glPushMatrix();
         glTranslatef(0.f, -5.f, 0.f);
-        glScalef(5.f, 5.f, 5.f);
+        glScalef(15.f, 15.f, 15.f);
         glCallList(GridDL);
     glPopMatrix();
 
+    // Done with the shader
     prog->Use(0);
 }
 

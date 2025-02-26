@@ -1,4 +1,3 @@
-// make this 120 for the mac:
 // #version 330 compatibility
 
 // out variables to be interpolated in the rasterizer and sent to each fragment shader:
@@ -10,9 +9,7 @@ varying  vec3  vE;	  // vector from point to eye
 
 // where the light is:
 
-// const vec3 LightPosition = vec3(  10., 20., 0. );
-
-#version 330 compatibility
+const vec3 LightPosition = vec3(  10., 20., 0. );
 
 void
 main( )

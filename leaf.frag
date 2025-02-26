@@ -1,8 +1,8 @@
-#version 330 compatibility
+// #version 330 compatibility
 
 // lighting uniform variables -- these can be set once and left alone:
 uniform float   uKa, uKd, uKs;	 // coefficients of each type of lighting -- make sum to 1.0
-uniform vec4    uColor;		 // object color
+uniform vec3    uColor;		 // object color
 uniform vec4    uSpecularColor;	 // light color
 uniform float   uShininess;	 // specular exponent
 uniform float   uAlpha;		 // transparency
@@ -14,15 +14,15 @@ uniform float   uTranslucency;     // How strong the back-light effect is
 uniform float   uS0, uT0, uD;
 
 // in variables from the vertex shader and interpolated in the rasterizer:
-in  vec3  vN;		   // normal vector
-in  vec3  vL;		   // vector from point to light
-in  vec3  vE;		   // vector from point to eye
-in  vec2  vST;		   // (s,t) texture coordinates
+varying  vec3  vN;		   // normal vector
+varying  vec3  vL;		   // vector from point to light
+varying  vec3  vE;		   // vector from point to eye
+varying  vec2  vST;		   // (s,t) texture coordinates
 
 void main()
 {
     vec3 myColor = uColor.rgb;
-    // vec3 myColor = vec3(0, 1, 0); // Object color (green)
+    // vec3 myColor = vec3(0, 1, 0 ); // Object color (green)
 
     // Normalize the interpolated vectors:
     vec3 Normal = normalize(vN);
