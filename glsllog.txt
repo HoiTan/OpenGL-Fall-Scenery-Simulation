@@ -1,4 +1,27 @@
 
-ERROR: 0:1: '' :  version '330' is not supported
-ERROR: 0:1: '' : syntax error: #version
+ERROR: 0:39: No matching function for call to texture2D(sampler2D, vec3)
+ERROR: 0:40: Use of undeclared identifier 'nvx'
+ERROR: 0:40: Use of undeclared identifier 'nvx'
+ERROR: 0:40: Use of undeclared identifier 'nvx'
+ERROR: 0:40: Use of undeclared identifier 'nvx'
+ERROR: 0:41: Use of undeclared identifier 'angx'
+ERROR: 0:43: No matching function for call to texture2D(sampler2D, vec3)
+ERROR: 0:44: Use of undeclared identifier 'nvy'
+ERROR: 0:44: Use of undeclared identifier 'nvy'
+ERROR: 0:44: Use of undeclared identifier 'nvy'
+ERROR: 0:44: Use of undeclared identifier 'nvy'
+ERROR: 0:45: Use of undeclared identifier 'angy'
+ERROR: 0:47: Use of undeclared identifier 'angx'
+ERROR: 0:47: Use of undeclared identifier 'angy'
+ERROR: 0:48: Use of undeclared identifier 'n'
+ERROR: 0:48: Use of undeclared identifier 'n'
+ERROR: 0:52: Use of undeclared identifier 'n'
+ERROR: 0:58: Use of undeclared identifier 'Normal'
+ERROR: 0:59: Use of undeclared identifier 'd'
+ERROR: 0:62: Use of undeclared identifier 'd'
+ERROR: 0:64: Use of undeclared identifier 'Normal'
+ERROR: 0:65: Use of undeclared identifier 'ref'
+ERROR: 0:66: Use of undeclared identifier 'cosphi'
+ERROR: 0:67: Use of undeclared identifier 'cosphi'
+ERROR: 0:70: Use of undeclared identifier 'diffuse'
 

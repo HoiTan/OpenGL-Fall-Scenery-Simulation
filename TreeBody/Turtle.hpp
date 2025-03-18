@@ -5,6 +5,7 @@
 #include <vector>
 #include <random>
 #include "../glm/glm.hpp"
+#include "../glslprogram.h"
 
 class Turtle {
 public:
@@ -22,7 +23,7 @@ public:
     void setRadius(float radius);
     void setTaperFactor(float taperFactor);
     void setInitialFactor(float angleDegrees, float stepLength, float radius, float taperFactor);
-    void interpret(const std::string &lsystemString);
+    void interpret(const std::string &lsystemString, GLSLProgram * prog);
     // Call these to set tropism (T) and coefficient (e)
     void setTropismVector(const glm::vec3& tropism);
     void setTropismCoefficient(float coeff);
@@ -37,8 +38,9 @@ private:
         glm::vec3 zAxis; // Up direction
         glm::vec3 xAxis; // Right direction
         float currentRadius;
+        int depth;
     };
-
+ 
     TurtleState m_state;
     float m_angleIncrement;
     float m_stepLength;

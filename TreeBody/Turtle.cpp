@@ -7,6 +7,7 @@
 #include "../glm/gtc/matrix_transform.hpp"
 #include "../glm/gtc/constants.hpp"
 #include "../glm/gtc/type_ptr.hpp"
+#include "../glslprogram.cpp"
 
 // Include OpenGL headers
 #ifdef __APPLE__
@@ -32,6 +33,7 @@ Turtle::Turtle()
     m_state.yAxis    = glm::vec3(0.0f, 1.0f, 0.0f); // heading
     m_state.zAxis    = glm::vec3(0.0f, 0.0f, 1.0f); // up
     m_state.xAxis    = glm::vec3(1.0f, 0.0f, 0.0f); // right
+    m_state.depth    = 0;
 }
 
 // -------------------------------------
@@ -168,7 +170,7 @@ void Turtle::applyTropism()
 // ---------------------------------------------------------
 // interpret(...) with parametric commands + TROPISM
 // ---------------------------------------------------------
-void Turtle::interpret(const std::string &lsystemString)
+void Turtle::interpret(const std::string &lsystemString,  GLSLProgram * prog)
 {
     static std::uniform_real_distribution<float> branchDist(0.0f, 1.0f);
     static std::uniform_real_distribution<float> anglePitchDist(-20.0f, 20.0f);
@@ -188,6 +190,7 @@ void Turtle::interpret(const std::string &lsystemString)
         char c = lsystemString[i];
 
         if (c == 'F') {
+            // 1) Parse the distance
             size_t lookahead = i + 1;
             float dist = m_stepLength;
             if (lookahead < lsystemString.size() && lsystemString[lookahead] == '(') {
@@ -195,32 +198,49 @@ void Turtle::interpret(const std::string &lsystemString)
             }
             i = lookahead;
 
-            // The current radius stack top is the "base" for this segment
-            float baseR = m_radiusStack.top();  
-            // You want the top radius to be some fraction, e.g. 0.7 * base
-            float topR = baseR * m_taperFactor; // Or your desired taper ratio
+            float baseR = m_radiusStack.top();
+            float topR  = baseR * m_taperFactor;
 
-            // Draw segment from baseR -> topR
-            glm::vec3 start = m_state.position;
-            glm::vec3 end   = start + m_state.yAxis * dist;
+            // 2) Decide how many subdivisions. E.g. 1 leaf per X length:
+            float desiredSpacing = 5.f; // distance between leaves
+            int numLeaves = std::max(1, (int)std::floor(dist / desiredSpacing));
+            // int numLeaves = 4;
+            float partialDist = dist / (float)numLeaves;
+            float partialDeltaRadius = (baseR - topR) / (float)numLeaves;
+            float currentRadius = baseR;
 
-            float colorFactor = baseR / m_initialRadius;
-            glColor3f(0.55f * colorFactor, 0.27f * colorFactor, 0.07f * colorFactor);
+            // 3) Repeatedly draw partial segments, move the turtle, add leaves
+            for (int leafIndex = 0; leafIndex < numLeaves; ++leafIndex) {
+                // Start a partial segment
+                glm::vec3 start = m_state.position;
+                glm::vec3 end   = start + m_state.yAxis * partialDist;
 
-            drawCylinder(start, end, baseR, topR);
+                // Taper from currentRadius -> (currentRadius - partialDeltaRadius)
+                float newRadius = currentRadius - partialDeltaRadius;
+                float colorFactor = baseR / m_initialRadius;
+                float uColor[3] = {0.3f * colorFactor, 0.1f * colorFactor, 0.07f * colorFactor};
+                // prog->Use();
+                // prog->SetUniformVariable((char*)"uColor", uColor);
+        
+                glColor3f(uColor[0], uColor[1], uColor[2]);
+                drawCylinder(start, end, currentRadius, newRadius);
 
-            // Update the radius stack with the new top radius
-            m_radiusStack.top() = topR;
+                // Move the turtle forward
+                m_state.position = end;
+                // Optionally place a leaf
+                addLeaf(newRadius);
 
-            // Move turtle forward
-            m_state.position = end;
+                // Update the radius so the next partial segment picks up seamlessly
+                currentRadius = newRadius;
 
-            // (Optional) add a leaf
-            addLeaf(topR);
+                // Optionally apply tropism after each partial step
+                applyTropism();
+            }
 
-            // Apply tropism, etc.
-            applyTropism();
-        }   
+            // The final top radius on the stack is newRadius
+            m_radiusStack.top() = currentRadius; 
+        }
+
         else if (c == '!') {
             // scale radius
             size_t lookahead = i + 1;
@@ -313,6 +333,7 @@ void Turtle::interpret(const std::string &lsystemString)
                 m_radiusStack.pop();
             }
             i++;
+
         }
         else if (c == '+') {
             rotate(m_state.yAxis, m_state.zAxis, m_angleIncrement);
@@ -385,18 +406,18 @@ void Turtle::addLeaf(float currentRadius)
     // 2) Orientation:
     //    Let's say we want the leaf's 'up' to be partly aligned with "world up"
     //    and partly with the branch axis (yAxis). We'll do a simple average:
-    glm::vec3 worldUp(0.0f, 0.0f, 1.0f);
-    glm::vec3 approximateNormal = glm::normalize(0.5f * worldUp + 0.5f * m_state.yAxis);
+    glm::vec3 worldUp(0.0f, 1.0f, 0.0f);
+    glm::vec3 approximateNormal = glm::normalize(0.6f * worldUp + 0.4f * m_state.yAxis);
 
     // Slight random tilt from that approximate normal
     float tiltDeg = angleDist(generator);
     float tiltRad = glm::radians(tiltDeg);
 
     // We'll rotate around the cross( normal, branchAxis ) to tilt it a bit
-    glm::vec3 axis = glm::cross(approximateNormal, m_state.yAxis);
+    glm::vec3 axis = glm::cross(approximateNormal, m_state.zAxis);
     if (glm::length(axis) < 1e-6f) {
         // fallback if normal ~ branchAxis
-        axis = glm::vec3(1, 0, 0);
+        axis = glm::vec3(0, 1, 0);
     }
     axis = glm::normalize(axis);
 
@@ -429,138 +450,6 @@ void Turtle::addLeaf(float currentRadius)
     //  -----------------------------------
     leafPositions.push_back(leaf);
 }
-
-// void Turtle::interpret(const std::string &lsystemString) {
-//     std::stack<TurtleState> stateStack;
-//     std::stack<float> radiusStack;
-
-//     // Define initial branch radius and taper factor
-//     radiusStack.push(m_initialRadius);
-
-//     std::uniform_real_distribution<float> posOffsetDist(-0.5f, 0.5f);
-//     std::uniform_real_distribution<float> rotAngleDist(-30.0f, 30.0f); // Degrees
-    
-//     for (auto c : lsystemString) {
-//         switch (c) {
-//             case 'F': {
-//                 // Current branch radius
-//                 float currentRadius = radiusStack.top();
-
-//                 // Current position and orientation
-//                 glm::vec3 start = m_state.position;
-//                 glm::vec3 end = start + m_state.yAxis * m_stepLength;
-                
-//                 // Set branch color based on radius (optional)
-//                 float colorFactor = currentRadius / m_initialRadius;
-//                 glColor3f(0.55f * colorFactor, 0.27f * colorFactor, 0.07f * colorFactor); // Brownish color
-                
-//                 // Draw the branch as a cylinder
-//                 drawCylinder(start, end, currentRadius);
-                
-//                 // Move to the end position
-//                 m_state.position = end;
-//             } break;
-
-//             case '+':
-//                 // Rotate +angle about Z-axis (yaw left)
-//                 rotate(m_state.yAxis, m_state.zAxis, m_angleIncrement);
-//                 rotate(m_state.xAxis, m_state.zAxis, m_angleIncrement);
-//                 break;
-
-//             case '-':
-//                 // Rotate -angle about Z-axis (yaw right)
-//                 rotate(m_state.yAxis, m_state.zAxis, -m_angleIncrement);
-//                 rotate(m_state.xAxis, m_state.zAxis, -m_angleIncrement);
-//                 break;
-
-//             case '<':
-//                 // Rotate +angle about Y-axis (roll left)
-//                 rotate(m_state.zAxis, m_state.yAxis, m_angleIncrement);
-//                 rotate(m_state.xAxis, m_state.yAxis, m_angleIncrement);
-//                 break;
-
-//             case '>':
-//                 // Rotate -angle about Y-axis (roll right)
-//                 rotate(m_state.zAxis, m_state.yAxis, -m_angleIncrement);
-//                 rotate(m_state.xAxis, m_state.yAxis, -m_angleIncrement);
-//                 break;
-
-//             case 'v':
-//                 // Rotate +angle about X-axis (pitch down)
-//                 rotate(m_state.yAxis, m_state.xAxis, m_angleIncrement);
-//                 rotate(m_state.zAxis, m_state.xAxis, m_angleIncrement);
-//                 break;
-
-//             case '&':
-//                 // Rotate -angle about X-axis (pitch up)
-//                 rotate(m_state.yAxis, m_state.xAxis, -m_angleIncrement);
-//                 rotate(m_state.zAxis, m_state.xAxis, -m_angleIncrement);
-//                 break;
-
-//             case '[':
-//                 // Push current state and radius
-//                 stateStack.push(m_state);
-//                 radiusStack.push(radiusStack.top() * m_taperFactor); // Tapering
-//                 break;
-
-//             case ']':
-//                 // Pop state and radius
-//                 if (!stateStack.empty()) {
-//                     m_state = stateStack.top();
-//                     stateStack.pop();
-//                 }
-//                 if (!radiusStack.empty()) {
-//                     radiusStack.pop();
-//                 }
-//                 break;
-
-//             case 'L': {
-//                 // Record leaf position and orientation
-//                 Leaf leaf;
-//                 leaf.position = m_state.position;
-
-//                 unsigned int seed = generateSeed(leaf.position);
-//                 std::mt19937 generator(seed); // Mersenne Twister PRNG
-                
-//                 // Apply random positional offsets
-//                 float offsetX = posOffsetDist(generator);
-//                 float offsetY = posOffsetDist(generator);
-//                 float offsetZ = posOffsetDist(generator);
-//                 leaf.position += glm::vec3(offsetX, offsetY, offsetZ);
-                
-//                 // Apply random rotations to the orientation vectors
-//                 float rotX = rotAngleDist(generator);
-//                 float rotY = rotAngleDist(generator);
-//                 float rotZ = rotAngleDist(generator);
-                
-//                 // Create rotation matrices
-//                 glm::mat4 rotMatrixX = glm::rotate(glm::mat4(1.0f), glm::radians(rotX), m_state.xAxis);
-//                 glm::mat4 rotMatrixY = glm::rotate(glm::mat4(1.0f), glm::radians(rotY), m_state.yAxis);
-//                 glm::mat4 rotMatrixZ = glm::rotate(glm::mat4(1.0f), glm::radians(rotZ), m_state.zAxis);
-                
-//                 // Apply rotations to the orientation vectors
-//                 glm::vec4 newUp = rotMatrixX * glm::vec4(m_state.zAxis, 0.0f);
-//                 glm::vec4 newRight = rotMatrixY * glm::vec4(m_state.xAxis, 0.0f);
-//                 glm::vec4 newForward = rotMatrixZ * glm::vec4(m_state.yAxis, 0.0f);
-                
-//                 leaf.up = glm::normalize(glm::vec3(newUp));
-//                 leaf.right = glm::normalize(glm::vec3(newRight));
-//                 leafPositions.push_back(leaf);
-//                 break;
-//             }
-
-//             default:
-//                 // Ignore other symbols
-//                 break;
-//         }
-
-//         // Re-orthogonalize the coordinate frame to prevent drift
-//         m_state.yAxis = glm::normalize(m_state.yAxis);
-//         m_state.zAxis = glm::normalize(m_state.zAxis);
-//         m_state.xAxis = glm::normalize(glm::cross(m_state.yAxis, m_state.zAxis));
-//         m_state.zAxis = glm::normalize(glm::cross(m_state.xAxis, m_state.yAxis));
-//     }
-// }
 
 void Turtle::rotate(glm::vec3 &dir, const glm::vec3 &axis, float angle) {
     glm::mat4 rot = glm::rotate(glm::mat4(1.0f), angle, axis);

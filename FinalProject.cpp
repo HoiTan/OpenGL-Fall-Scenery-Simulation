@@ -24,7 +24,7 @@
  * ------
  * Right-click opens a menu to toggle axes, depth cue, projections, etc.
  ******************************************************************************/
-
+   
 //=============================================================================
 //  1. Includes
 //=============================================================================
@@ -119,7 +119,7 @@ enum Colors {
 };
 
 // Window background color (RGBA):
-static const GLfloat BACKCOLOR[] = { 0.f, 0.f, 0.f, 1.f };
+static const GLfloat BACKCOLOR[] = { 0.53f, 0.81f, 0.92f, 1.f };
 
 // Axes line width:
 static const GLfloat AXES_WIDTH = 3.f;
@@ -278,7 +278,7 @@ float* MulArray3(float factor, float a, float b, float c )
 #include "bmptotexture.cpp"
 #include "loadobjfile.cpp"
 #include "keytime.cpp"
-#include "glslprogram.cpp"
+// #include "glslprogram.cpp"
 
 //=============================================================================
 // Additional Global Variables for L-system / Leaf rendering
@@ -300,17 +300,19 @@ Keytimes Kamp, Kfreq, Kspeed;
 GLSLProgram LeafProgram;
 GLSLProgram GetDepth;
 GLSLProgram RenderWithShadows;
+GLSLProgram BarkTextureProgram;
 // shadow texture
 GLuint DepthFramebuffer;
 GLuint DepthTexture;
 const int SHADOW_WIDTH = 1024;
 const int SHADOW_HEIGHT = 1024;
+GLuint Noise2;
 
 // Display the scene
 Turtle drawTreeBody();
 Turtle drawTernaryTreeBody();
 void DisplayOneScene(GLSLProgram * prog, Turtle& turtle);
-void DisplayOneScene2(GLSLProgram * prog );
+// void DisplayOneScene2(GLSLProgram * prog );
 
 //glui
 void GluiControlCallback(int controlID);
@@ -757,7 +759,7 @@ void DoDepthMenu(int id)
 }
 
 void DoMainMenu(int id)
-{
+{ 
     switch(id)
     {
         case RESET:
@@ -845,6 +847,27 @@ void InitMenus()
 
     // Attach the pop-up menu to the right mouse button:
     glutAttachMenu(GLUT_RIGHT_BUTTON);
+}
+
+unsigned char * ReadTexture2D( char *filename, int *width, int *height)
+{
+    FILE *fp = fopen(filename, "rb");
+    if( fp == NULL )
+    {
+        fprintf( stderr, "Cannot find the file '%s'\n", filename );
+        return NULL;
+    }
+        int nums, numt;
+        fread(&nums, 4, 1, fp);
+        fread(&numt, 4, 1, fp);
+        fprintf( stderr, "Texture size = %d x %d\n", nums, numt );
+        *width = nums;
+        *height = numt;
+        unsigned char * texture = new unsigned char[ 4 * nums * numt ];
+        fread(texture, 4 * nums * numt, 1, fp);
+        fclose(fp);
+        return texture;
+    
 }
 
 void InitGraphics()
@@ -956,11 +979,41 @@ void InitGraphics()
 	else
 		fprintf(stderr, "RenderWithShadows shader compiled.\n");
 	
+    // BarkTexture shader
+    BarkTextureProgram.Init();
+    valid = BarkTextureProgram.Create((char*)"BarkTexture.vert", (char*)"BarkTexture.frag");
+    if(!valid)
+        fprintf(stderr, "Error compiling BarkTexture shader.\n");
+    else
+        fprintf(stderr, "BarkTexture shader compiled.\n");
+
+    // Set noise texture:
+    glGenTextures(1, &Noise2);
+    int nums, numt;
+    unsigned char * texture = ReadTexture2D( "noise2d.064.tex", &nums, &numt);
+    if( texture != NULL )
+    {
+        glBindTexture(GL_TEXTURE_2D, Noise2);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, 4, nums, numt, 0, GL_RGBA,
+        GL_UNSIGNED_BYTE, texture);
+        fprintf( stderr, "//////////////////////////////" );
+        fprintf( stderr, "Texture '%s' loaded\n", "noise2d.064.tex" );
+        fprintf( stderr, "  %d x %d pixels\n", nums, numt );
+    }
+     else{
+        fprintf( stderr, "//////////////////////////////" );
+        fprintf(stderr, "Error reading noise texture.\n");
+     }
+    
 	////////////////////////////////////////////////////////////
 	//set up shadow texture:
 	//Generate a framebuffer object and a depth texture:
     glGenFramebuffers(1, &DepthFramebuffer);
-	glGenTextures(1, &DepthTexture);
+	glGenTextures(2, &DepthTexture);
 
 	//Create a texture that will be the framebuffer's depth buffer
 	glBindTexture(GL_TEXTURE_2D, DepthTexture);
@@ -1279,30 +1332,18 @@ void SetUpTexture(char* filename, GLuint* texture)
 Turtle drawTreeBody()
 {
     // Define the L-system:
-    // (Three example rules; we'll pick one via changeRule)
-    // std::vector<std::string> ruleStringSet = {
-    //     "F[>A][<A][+A][-AvA][^A]L",
-    //     "F[>A][<A][+A][-A][vA][^A]L",
-    //     "F[+A][-A]<A>AvA^AL"
-    // };
-    // if(changeRule >= (int)ruleStringSet.size())
-    //     changeRule = 0;
-    // std::string inputRule = ruleStringSet[changeRule];
-    // std::string axiom = "A";
-    // std::unordered_map<char, std::string> rules = {
-    //     {'A', inputRule}
-    // };
     // Axiom & rules
-    std::string axiom = "!(1)F(6)/(45)A";
+    std::string axiom = "!(1)F(6)/(45)AF(l)A";
     std::unordered_map<std::string, std::string> rules = {
         {
-            {"A",    "!(vr)F(l)[&(a)F(l)A[&(a)F(l)A]]/(d1)[&(a)F(l)A[&(a)F(l)A]]/(d2)[&(a)F(l)A[&(a)F(l)A]]"},
+            {"A",    "!(vr)F(l)[&(a)F(l)A]/(d1)[&(a)F(l)AB]/(d2)[&(a)F(l)AB]"},
             {"F(l)",  "F(l*lr)"},
             {"!(vr)", "!(vr*vr)"},
+            {"B", "[F&(a)/F(l)]A"}
         }
-    };
+    };   
     // 1) Create the L-System
-    LSystem lsystem(axiom, rules, /*iterations*/6);
+    LSystem lsystem(axiom, rules, /*iterations*/ 8 );
     std::string finalString = lsystem.generate();
     // std::string finalString = "!(1)F(200)/(45)!(vr*vr)F(l*lr)[&(a)F(l*lr)!(vr)F(l)[&(a)F(l)A]/(d1)[&(a)F(l)A]/(d2)[&(a)F(l)A]]/(d1)[&(a)F(l*lr)!(vr)F(l)[&(a)F(l)A]/(d1)[&(a)F(l)A]/(d2)[&(a)F(l)A]]/(d2)[&(a)F(l*lr)!(vr)F(l)[&(a)F(l)A]/(d1)[&(a)F(l)A]/(d2)[&(a)F(l)A]]";
     // std::cout << "Ternary L-System final string: " << finalString << std::endl;
@@ -1315,17 +1356,28 @@ Turtle drawTreeBody()
         7.f,    // initial radius
         .8f    // taper factor
     );
-     // Now set tropism 
-    turtle.setTropismVector(glm::vec3(0.0f, -1.0f, 0.0f)); // e.g. gravity downward
-    turtle.setTropismCoefficient(0.12f); // how strongly it bends
+     //set tropism 
+    turtle.setTropismVector(glm::vec3(0.0f, -.5f, 0.0f)); // gravity downward
+    turtle.setTropismCoefficient(0.12f); // how strongly it bends'
+    
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, Noise2);
+    BarkTextureProgram.Use();
+    BarkTextureProgram.SetUniformVariable((char*)"uKa", 0.5f);
+    BarkTextureProgram.SetUniformVariable((char*)"uKd", 0.5f);
+    BarkTextureProgram.SetUniformVariable((char*)"uKs", 0.4f);
+    BarkTextureProgram.SetUniformVariable((char*)"uShininess", 1.f);
+    BarkTextureProgram.SetUniformVariable((char*)"uNoiseAmp", 2.9f);
+    BarkTextureProgram.SetUniformVariable((char*)"uNoiseFreq", 2.4f);
+    BarkTextureProgram.SetUniformVariable((char*)"Noise2", 3);
 
     // 3) Draw
     glPushMatrix(); 
-        turtle.interpret(finalString);
+        turtle.interpret(finalString, &BarkTextureProgram);
     glPopMatrix();
-
+    BarkTextureProgram.UnUse();
     return turtle;
-}
+} 
 
 void DisplayOneScene(GLSLProgram * prog, Turtle& turtle) {
 
@@ -1351,7 +1403,6 @@ void DisplayOneScene(GLSLProgram * prog, Turtle& turtle) {
             glMultMatrixf(glm::value_ptr(rotationMatrix));
 
             // 3) Scale 
-            //    If you have leaf.scale as a float, combine it with an overall factor
             float finalScale = 5.0f;  // base scaling
             #ifdef HAS_LEAF_SCALE // If your Leaf has a 'scale' field
             finalScale *= leaf.scale;
@@ -1359,7 +1410,7 @@ void DisplayOneScene(GLSLProgram * prog, Turtle& turtle) {
             glScalef(finalScale, finalScale, finalScale);
 
             // 4) Determine leaf color from leaf.position.y
-            float randval = leaf.position.y / 60.f;
+            float randval = leaf.position.y / 100.f;
             if (randval < 0.30f) {
                 NowLeafColor[0] = 1.0f;  NowLeafColor[1] = 0.55f; NowLeafColor[2] = 0.0f;
             } else if (randval < 0.50f) {
@@ -1375,7 +1426,7 @@ void DisplayOneScene(GLSLProgram * prog, Turtle& turtle) {
             // 5) Use GLSL shader and draw your leaf shape (e.g. a display list)
             prog->Use();
             prog->SetUniformVariable((char*)"uColor", NowLeafColor);
-
+            glRotatef(90.f, 0.f, 1.f, 0.f);
             glCallList(Leaf2DL);  // <-- your 2D leaf display list
 
             prog->UnUse();
@@ -1384,48 +1435,41 @@ void DisplayOneScene(GLSLProgram * prog, Turtle& turtle) {
     }
     glDisable(GL_TEXTURE_2D);
 
-    // Optionally draw the floor
-    glPushMatrix();
-        glTranslatef(0.f, -5.f, 0.f);
-        glScalef(15.f, 15.f, 15.f);
-        glCallList(GridDL);
-    glPopMatrix();
-
     // Done with the shader
     prog->Use(0);
 }
 
-void
-DisplayOneScene2(GLSLProgram * prog )
-{
-	//render a sphere:
-	glm::mat4 anim = glm::mat4(1.f);
-	prog->SetUniformVariable((char*)"uAnim", anim);
-	float color[3] = { 1., 1., 0.};
-	prog->SetUniformVariable((char*)"uColor", color );
-	glCallList(OSUSphere);
+// void
+// DisplayOneScene2(GLSLProgram * prog )
+// {
+// 	//render a sphere:
+// 	glm::mat4 anim = glm::mat4(1.f);
+// 	prog->SetUniformVariable((char*)"uAnim", anim);
+// 	float color[3] = { 1., 1., 0.};
+// 	prog->SetUniformVariable((char*)"uColor", color );
+// 	glCallList(OSUSphere);
 
-	//Render cubes:
-	anim = glm::mat4(1.f);
-	anim = glm::translate(anim, glm::vec3(-1., 2.5 + 2.f * sin(M_PI * Time), 6.f));
-	anim = glm::scale(anim, glm::vec3(0.5));
-	prog->SetUniformVariable((char*)"uAnim", anim);
-    color[0] = 1.; color[1] = 0.; color[2] = 0.;
-	prog->SetUniformVariable((char*)"uColor", color );
-	glutSolidCube(1.);
+// 	//Render cubes:
+// 	anim = glm::mat4(1.f);
+// 	anim = glm::translate(anim, glm::vec3(-1., 2.5 + 2.f * sin(M_PI * Time), 6.f));
+// 	anim = glm::scale(anim, glm::vec3(0.5));
+// 	prog->SetUniformVariable((char*)"uAnim", anim);
+//     color[0] = 1.; color[1] = 0.; color[2] = 0.;
+// 	prog->SetUniformVariable((char*)"uColor", color );
+// 	glutSolidCube(1.);
 
-	anim = glm::mat4(1.f);
-	anim = glm::translate(anim, glm::vec3(2.0f, 6.0f, 3.0));
-	float angle = (float)(45.f * 2.f * sin(M_PI * Time));
-	anim = glm::rotate(anim, glm::radians(angle), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
-	anim = glm::scale(anim, glm::vec3(0.5f));
-	prog->SetUniformVariable((char*)"uAnim", anim);
-	color[0] = 0.; color[1] = 1.; color[2] = 0.;
-	prog->SetUniformVariable((char*)"uColor", color);
-	glutSolidCube(2.);
+// 	anim = glm::mat4(1.f);
+// 	anim = glm::translate(anim, glm::vec3(2.0f, 6.0f, 3.0));
+// 	float angle = (float)(45.f * 2.f * sin(M_PI * Time));
+// 	anim = glm::rotate(anim, glm::radians(angle), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
+// 	anim = glm::scale(anim, glm::vec3(0.5f));
+// 	prog->SetUniformVariable((char*)"uAnim", anim);
+// 	color[0] = 0.; color[1] = 1.; color[2] = 0.;
+// 	prog->SetUniformVariable((char*)"uColor", color);
+// 	glutSolidCube(2.);
 
-	prog->Use(0);
-}
+// 	prog->Use(0);
+// }
 
 void GluiControlCallback(int controlID)
 {
